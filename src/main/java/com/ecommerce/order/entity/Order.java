@@ -15,27 +15,30 @@ public class Order {
     private final UUID id;
     private final UUID userId;
     private final List<OrderItem> items;
+    private final Money discount; // New field
     private Status status;
     private final LocalDateTime createdAt;
     private final Money totalAmount;
 
-    public Order(UUID id, UUID userId, List<OrderItem> items) {
+    public Order(UUID id, UUID userId, List<OrderItem> items, Money discount) {
         this.id = id;
         this.userId = userId;
         this.items = items;
+        this.discount = discount != null ? discount : new Money(BigDecimal.ZERO, "USD");
         this.status = Status.CREATED;
         this.createdAt = LocalDateTime.now();
         this.totalAmount = calculateTotal();
     }
     
-    public static Order create(UUID userId, List<OrderItem> items) {
-        return new Order(UUID.randomUUID(), userId, items);
+    public static Order create(UUID userId, List<OrderItem> items, Money discount) {
+        return new Order(UUID.randomUUID(), userId, items, discount);
     }
     
     private Money calculateTotal() {
-        return items.stream()
+        Money subTotal = items.stream()
                 .map(OrderItem::getSubTotal)
                 .reduce(new Money(BigDecimal.ZERO, "USD"), Money::add);
+        return subTotal.subtract(discount);
     }
 
     public void pay() {

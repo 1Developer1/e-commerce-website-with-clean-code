@@ -41,6 +41,14 @@ public final class Money {
         return new Money(this.amount.multiply(BigDecimal.valueOf(multiplier)), this.currency);
     }
 
+    public Money subtract(Money other) {
+        if (!this.currency.equals(other.currency)) {
+            throw new IllegalArgumentException("Currencies must match for subtraction");
+        }
+        BigDecimal newAmount = this.amount.subtract(other.amount);
+        return new Money(newAmount.max(BigDecimal.ZERO), this.currency); // Prevent negative totals
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

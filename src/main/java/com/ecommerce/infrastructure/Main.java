@@ -21,8 +21,29 @@ import com.ecommerce.product.usecase.ListProductsOutput;
 import com.ecommerce.product.usecase.ListProductsUseCase;
 import com.ecommerce.product.usecase.ProductRepository;
 
+import com.ecommerce.discount.usecase.DiscountRepository;
+import com.ecommerce.discount.adapter.out.persistence.InMemoryDiscountRepository;
+import com.ecommerce.discount.usecase.GetDiscountUseCase;
+import com.ecommerce.discount.usecase.GetDiscountInput;
+import com.ecommerce.discount.usecase.GetDiscountOutput;
+import com.ecommerce.cart.usecase.port.DiscountProvider;
+import com.ecommerce.cart.usecase.ApplyDiscountUseCase;
+import com.ecommerce.cart.usecase.ApplyDiscountInput;
+import com.ecommerce.cart.usecase.ApplyDiscountOutput;
+
+import com.ecommerce.payment.usecase.port.PaymentGateway;
+import com.ecommerce.payment.adapter.out.strategy.CreditCardAdapter;
+import com.ecommerce.payment.adapter.out.strategy.BankTransferAdapter;
+import com.ecommerce.payment.usecase.PayOrderUseCase;
+import com.ecommerce.payment.usecase.PayOrderInput;
+import com.ecommerce.payment.usecase.PayOrderOutput;
+import com.ecommerce.payment.adapter.in.controller.PaymentController;
+
 import java.math.BigDecimal;
 import java.util.UUID;
+import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
 
 public class Main {
     public static void main(String[] args) {
@@ -34,13 +55,36 @@ public class Main {
         // 2. Use Cases
         CreateProductUseCase createProductUseCase = new CreateProductUseCase(productRepository);
         ListProductsUseCase listProductsUseCase = new ListProductsUseCase(productRepository);
+        
+        // Discount Module Wiring
+        DiscountRepository discountRepository = new InMemoryDiscountRepository();
+        // Seed a discount code
+        discountRepository.save(com.ecommerce.discount.entity.Discount.create("SUMMER10", com.ecommerce.shared.domain.Money.of(new BigDecimal("10.00"), "USD")));
+        
+        GetDiscountUseCase getDiscountUseCase = new GetDiscountUseCase(discountRepository);
+        
+        // Adapter: Cart -> Discount
+        DiscountProvider discountProvider = code -> {
+            GetDiscountOutput output = getDiscountUseCase.execute(new com.ecommerce.discount.usecase.GetDiscountInput(code));
+            return output.isValid() ? java.util.Optional.of(output.amount()) : java.util.Optional.empty();
+        };
+
         AddToCartUseCase addToCartUseCase = new AddToCartUseCase(cartRepository, productRepository);
+        ApplyDiscountUseCase applyDiscountUseCase = new ApplyDiscountUseCase(cartRepository, discountProvider);
         PlaceOrderUseCase placeOrderUseCase = new PlaceOrderUseCase(orderRepository, cartRepository);
+
+        // Payment Module Wiring
+        Map<String, PaymentGateway> paymentStrategies = new HashMap<>();
+        paymentStrategies.put("CREDIT_CARD", new CreditCardAdapter());
+        paymentStrategies.put("BANK_TRANSFER", new BankTransferAdapter());
+        
+        PayOrderUseCase payOrderUseCase = new PayOrderUseCase(orderRepository, paymentStrategies);
 
         // 3. Interface Adapters / Controllers
         ProductController productController = new ProductController(createProductUseCase, listProductsUseCase);
-        CartController cartController = new CartController(addToCartUseCase);
+        CartController cartController = new CartController(addToCartUseCase, applyDiscountUseCase);
         OrderController orderController = new OrderController(placeOrderUseCase);
+        PaymentController paymentController = new PaymentController(payOrderUseCase);
 
         // 4. Scenario Execution
         System.out.println("--- E-Commerce System Started ---");
@@ -67,11 +111,24 @@ public class Main {
         AddToCartOutput cartOutput = cartController.addToCart(cartInput);
         System.out.println("Cart: " + cartOutput.itemsCount() + " items, Total: " + cartOutput.totalAmount() + " " + cartOutput.currency());
 
-        // Step 4: Place Order
-        System.out.println("\n[4] Placing Order...");
+        // Step 4: Apply Discount
+        System.out.println("\n[4] Applying Discount...");
+        ApplyDiscountInput discountInput = new ApplyDiscountInput(userId, "SUMMER10");
+        ApplyDiscountOutput discountOutput = cartController.applyDiscount(discountInput);
+        System.out.println("Discount Applied: " + discountOutput.success() + " (" + discountOutput.message() + ")");
+        System.out.println("New Cart Total: " + discountOutput.newTotal());
+
+        // Step 5: Place Order
+        System.out.println("\n[5] Placing Order...");
         PlaceOrderInput orderInput = new PlaceOrderInput(userId);
         PlaceOrderOutput orderOutput = orderController.placeOrder(orderInput);
         System.out.println("Order Placed: ID=" + orderOutput.orderId() + ", Status=" + orderOutput.status() + ", Total=" + orderOutput.totalAmount());
+        
+        // Step 6: Pay Order
+        System.out.println("\n[6] Paying Order...");
+        PayOrderInput payInput = new PayOrderInput(orderOutput.orderId(), "CREDIT_CARD");
+        PayOrderOutput payOutput = paymentController.payOrder(payInput);
+        System.out.println("Payment Result: " + payOutput.success() + " (" + payOutput.message() + ")");
         
         System.out.println("\n--- Scenario Completed ---");
     }

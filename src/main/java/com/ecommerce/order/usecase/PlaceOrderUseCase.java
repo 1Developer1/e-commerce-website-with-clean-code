@@ -29,7 +29,7 @@ public class PlaceOrderUseCase {
                 .map(item -> new OrderItem(item.getProductId(), item.getQuantity(), item.getPrice()))
                 .collect(Collectors.toList());
 
-        Order order = Order.create(cart.getUserId(), orderItems);
+        Order order = Order.create(cart.getUserId(), orderItems, cart.getDiscount());
         orderRepository.save(order);
         
         cart.clear();

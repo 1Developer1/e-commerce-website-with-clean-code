@@ -13,15 +13,22 @@ public class Cart {
     private final UUID id;
     private final UUID userId;
     private final List<CartItem> items;
+    private Money discount; // New field
 
     public Cart(UUID id, UUID userId) {
         this.id = id;
         this.userId = userId;
         this.items = new ArrayList<>();
+        this.discount = Money.of(BigDecimal.ZERO, "USD"); // Default zero discount
     }
     
     public static Cart create(UUID userId) {
         return new Cart(UUID.randomUUID(), userId);
+    }
+
+    public void applyDiscount(Money discount) {
+        if (discount == null) throw new IllegalArgumentException("Discount cannot be null");
+        this.discount = discount;
     }
 
     public void addItem(Product product, int quantity) {
@@ -44,12 +51,15 @@ public class Cart {
     
     public void clear() {
         items.clear();
+        this.discount = Money.of(BigDecimal.ZERO, "USD"); // Reset discount
     }
 
     public Money getTotalPrice() {
-        return items.stream()
+        Money subTotal = items.stream()
             .map(CartItem::getSubTotal)
-            .reduce(new Money(BigDecimal.ZERO, "USD"), Money::add); // Assuming USD for now, strictly should handle mixed currencies or enforce single currency
+            .reduce(new Money(BigDecimal.ZERO, "USD"), Money::add);
+        
+        return subTotal.subtract(discount);
     }
 
     public UUID getId() {
@@ -58,6 +68,10 @@ public class Cart {
 
     public UUID getUserId() {
         return userId;
+    }
+    
+    public Money getDiscount() {
+        return discount;
     }
 
     public boolean isEmpty() {
