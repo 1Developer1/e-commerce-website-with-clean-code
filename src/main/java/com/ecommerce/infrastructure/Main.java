@@ -39,6 +39,13 @@ import com.ecommerce.payment.usecase.PayOrderInput;
 import com.ecommerce.payment.usecase.PayOrderOutput;
 import com.ecommerce.payment.adapter.in.controller.PaymentController;
 
+import com.ecommerce.cart.usecase.CartService;
+import com.ecommerce.cart.usecase.CartServiceImpl;
+
+import com.ecommerce.shared.event.EventBus;
+import com.ecommerce.shared.event.SimpleEventBus;
+import com.ecommerce.order.adapter.in.event.OrderPaymentEventHandler;
+
 import java.math.BigDecimal;
 import java.util.UUID;
 import java.util.Optional;
@@ -47,10 +54,16 @@ import java.util.HashMap;
 
 public class Main {
     public static void main(String[] args) {
+        // 0. Shared Infrastructure
+        EventBus eventBus = new SimpleEventBus();
+
         // 1. Infrastructure / Persistence
         ProductRepository productRepository = new InMemoryProductRepository();
         CartRepository cartRepository = new InMemoryCartRepository();
         OrderRepository orderRepository = new InMemoryOrderRepository();
+        
+        // Event Handlers
+        new OrderPaymentEventHandler(orderRepository, eventBus);
 
         // 2. Use Cases
         CreateProductUseCase createProductUseCase = new CreateProductUseCase(productRepository);
@@ -64,21 +77,29 @@ public class Main {
         GetDiscountUseCase getDiscountUseCase = new GetDiscountUseCase(discountRepository);
         
         // Adapter: Cart -> Discount
-        DiscountProvider discountProvider = code -> {
+        DiscountProvider discountProvider = (cart, code) -> {
             GetDiscountOutput output = getDiscountUseCase.execute(new com.ecommerce.discount.usecase.GetDiscountInput(code));
+            
+            // Logic can be extended here: e.g. percentage calculation based on cart.getTotalPrice()
+            // For now, it remains fixed amount from Discount Entity
             return output.isValid() ? java.util.Optional.of(output.amount()) : java.util.Optional.empty();
         };
 
+        // Services / Facades
+        CartService cartService = new CartServiceImpl(cartRepository);
+
         AddToCartUseCase addToCartUseCase = new AddToCartUseCase(cartRepository, productRepository);
         ApplyDiscountUseCase applyDiscountUseCase = new ApplyDiscountUseCase(cartRepository, discountProvider);
-        PlaceOrderUseCase placeOrderUseCase = new PlaceOrderUseCase(orderRepository, cartRepository);
+        // Inject CartService Facade instead of CartRepository
+        PlaceOrderUseCase placeOrderUseCase = new PlaceOrderUseCase(orderRepository, cartService);
 
         // Payment Module Wiring
         Map<String, PaymentGateway> paymentStrategies = new HashMap<>();
         paymentStrategies.put("CREDIT_CARD", new CreditCardAdapter());
         paymentStrategies.put("BANK_TRANSFER", new BankTransferAdapter());
         
-        PayOrderUseCase payOrderUseCase = new PayOrderUseCase(orderRepository, paymentStrategies);
+        // Inject EventBus instead of just Repos
+        PayOrderUseCase payOrderUseCase = new PayOrderUseCase(orderRepository, paymentStrategies, eventBus);
 
         // 3. Interface Adapters / Controllers
         ProductController productController = new ProductController(createProductUseCase, listProductsUseCase);

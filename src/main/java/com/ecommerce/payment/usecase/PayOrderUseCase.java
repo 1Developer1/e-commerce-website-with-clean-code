@@ -3,6 +3,8 @@ package com.ecommerce.payment.usecase;
 import com.ecommerce.order.entity.Order;
 import com.ecommerce.order.usecase.OrderRepository;
 import com.ecommerce.payment.usecase.port.PaymentGateway;
+import com.ecommerce.payment.usecase.event.PaymentSucceededEvent;
+import com.ecommerce.shared.event.EventBus;
 
 import java.util.Map;
 import java.util.Optional;
@@ -11,10 +13,12 @@ import java.util.UUID;
 public class PayOrderUseCase {
     private final OrderRepository orderRepository;
     private final Map<String, PaymentGateway> paymentStrategies;
+    private final EventBus eventBus;
 
-    public PayOrderUseCase(OrderRepository orderRepository, Map<String, PaymentGateway> paymentStrategies) {
+    public PayOrderUseCase(OrderRepository orderRepository, Map<String, PaymentGateway> paymentStrategies, EventBus eventBus) {
         this.orderRepository = orderRepository;
         this.paymentStrategies = paymentStrategies;
+        this.eventBus = eventBus;
     }
 
     public PayOrderOutput execute(PayOrderInput input) {
@@ -35,8 +39,8 @@ public class PayOrderUseCase {
 
         boolean paymentSuccess = gateway.pay(order.getTotalAmount());
         if (paymentSuccess) {
-            order.pay();
-            orderRepository.save(order);
+            // Decoupling: Instead of updating order directly, publish event
+            eventBus.publish(new PaymentSucceededEvent(order.getId(), order.getTotalAmount()));
             return new PayOrderOutput(true, "Payment successful via " + input.paymentMethod());
         } else {
             return new PayOrderOutput(false, "Payment failed");

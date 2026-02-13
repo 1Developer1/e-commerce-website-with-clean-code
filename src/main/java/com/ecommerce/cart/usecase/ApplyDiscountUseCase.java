@@ -21,7 +21,7 @@ public class ApplyDiscountUseCase {
         }
         Cart cart = cartOpt.get();
 
-        Optional<Money> discountAmountOpt = discountProvider.getDiscount(input.discountCode());
+        Optional<Money> discountAmountOpt = discountProvider.getDiscount(cart, input.discountCode());
         if (discountAmountOpt.isEmpty()) {
             return new ApplyDiscountOutput(false, "Invalid discount code", cart.getTotalPrice());
         }

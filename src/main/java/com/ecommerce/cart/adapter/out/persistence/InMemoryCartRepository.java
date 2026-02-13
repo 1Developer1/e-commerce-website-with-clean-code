@@ -2,14 +2,24 @@ package com.ecommerce.cart.adapter.out.persistence;
 
 import com.ecommerce.cart.entity.Cart;
 import com.ecommerce.cart.usecase.CartRepository;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.ecommerce.cart.usecase.dto.CartDto;
+import com.ecommerce.cart.usecase.dto.CartMapper;
+
 public class InMemoryCartRepository implements CartRepository {
     private final Map<UUID, Cart> carts = new ConcurrentHashMap<>();
     private final Map<UUID, UUID> userCartMap = new ConcurrentHashMap<>(); // UserId -> CartId
+
+    @Override
+    public void save(Cart cart) {
+        carts.put(cart.getId(), cart);
+        userCartMap.put(cart.getUserId(), cart.getId());
+    }
 
     @Override
     public Optional<Cart> findByUserId(UUID userId) {
@@ -21,8 +31,7 @@ public class InMemoryCartRepository implements CartRepository {
     }
 
     @Override
-    public void save(Cart cart) {
-        carts.put(cart.getId(), cart);
-        userCartMap.put(cart.getUserId(), cart.getId());
+    public Optional<CartDto> findDtoByUserId(UUID userId) {
+        return findByUserId(userId).map(CartMapper::toDto);
     }
 }

@@ -33,4 +33,13 @@ public class CartItem {
     public Money getPrice() {
         return price;
     }
+
+    // Alias for Mapper
+    public Money getUnitPrice() {
+        return price;
+    }
+
+    public Money getTotalPrice() {
+        return getSubTotal();
+    }
 }

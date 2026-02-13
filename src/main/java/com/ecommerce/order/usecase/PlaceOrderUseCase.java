@@ -1,7 +1,7 @@
 package com.ecommerce.order.usecase;
 
-import com.ecommerce.cart.entity.Cart;
-import com.ecommerce.cart.usecase.CartRepository;
+import com.ecommerce.cart.usecase.CartService;
+import com.ecommerce.cart.usecase.dto.CartDto;
 import com.ecommerce.order.entity.Order;
 import com.ecommerce.order.entity.OrderItem;
 
@@ -10,30 +10,31 @@ import java.util.stream.Collectors;
 
 public class PlaceOrderUseCase {
     private final OrderRepository orderRepository;
-    private final CartRepository cartRepository;
+    private final CartService cartService;
 
-    public PlaceOrderUseCase(OrderRepository orderRepository, CartRepository cartRepository) {
+    public PlaceOrderUseCase(OrderRepository orderRepository, CartService cartService) {
         this.orderRepository = orderRepository;
-        this.cartRepository = cartRepository;
+        this.cartService = cartService;
     }
 
     public PlaceOrderOutput execute(PlaceOrderInput input) {
-        return cartRepository.findByUserId(input.userId())
+        // Using Facade Service to get DTO
+        return cartService.getCartForOrder(input.userId())
                 .filter(cart -> !cart.isEmpty())
                 .map(this::createOrderFromCart)
                 .orElseGet(() -> new PlaceOrderOutput(false, "Cart is empty or not found", null, null, null));
     }
 
-    private PlaceOrderOutput createOrderFromCart(Cart cart) {
-        List<OrderItem> orderItems = cart.getItems().stream()
-                .map(item -> new OrderItem(item.getProductId(), item.getQuantity(), item.getPrice()))
+    private PlaceOrderOutput createOrderFromCart(CartDto cart) {
+        List<OrderItem> orderItems = cart.items().stream()
+                .map(item -> new OrderItem(item.productId(), item.quantity(), item.unitPrice()))
                 .collect(Collectors.toList());
-
-        Order order = Order.create(cart.getUserId(), orderItems, cart.getDiscount());
+        
+        Order order = Order.create(cart.userId(), orderItems, cart.discount());
         orderRepository.save(order);
         
-        cart.clear();
-        cartRepository.save(cart);
+        // Clearing cart via Facade
+        cartService.clearCart(cart.userId());
 
         return new PlaceOrderOutput(
             true, 
