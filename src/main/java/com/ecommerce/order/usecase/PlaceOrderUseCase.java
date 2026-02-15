@@ -1,6 +1,6 @@
 package com.ecommerce.order.usecase;
 
-import com.ecommerce.cart.usecase.CartService;
+import com.ecommerce.cart.api.CartService;
 import com.ecommerce.cart.usecase.dto.CartDto;
 import com.ecommerce.order.entity.Order;
 import com.ecommerce.order.entity.OrderItem;

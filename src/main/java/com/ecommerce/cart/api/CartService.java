@@ -1,4 +1,4 @@
-package com.ecommerce.cart.usecase;
+package com.ecommerce.cart.api;
 
 import com.ecommerce.cart.usecase.dto.CartDto;
 import java.util.Optional;

@@ -1,6 +1,6 @@
 # System Class Diagram
 
-This diagram represents the detailed static structure of the system, including all packages, classes, fields, methods, and relationships. It reflects recent refactorings including DTOs, Domain Events, and Module Facades.
+This diagram represents the detailed static structure of the system, including all packages, classes, fields, methods, and relationships. It reflects strict module encapsulation (API vs Internal) and Payment decoupling.
 
 ```mermaid
 classDiagram
@@ -111,16 +111,6 @@ classDiagram
             +findByUserId(UUID) Optional~Cart~
             +findDtoByUserId(UUID) Optional~CartDto~
         }
-        class CartService {
-            <<interface>>
-            +getCartForOrder(UUID) Optional~CartDto~
-            +clearCart(UUID)
-        }
-        class CartServiceImpl {
-            -CartRepository cartRepository
-            +getCartForOrder(UUID)
-            +clearCart(UUID)
-        }
         class DiscountProvider {
             <<interface>>
             +getDiscount(Cart, String) Optional~Money~
@@ -134,6 +124,26 @@ classDiagram
             -CartRepository cartRepo
             -DiscountProvider discountProvider
             +execute(ApplyDiscountInput)
+        }
+    }
+
+    namespace com_ecommerce_cart_api {
+        class CartService {
+            <<interface>>
+            +getCartForOrder(UUID) Optional~CartDto~
+            +clearCart(UUID)
+        }
+    }
+
+    namespace com_ecommerce_cart_internal {
+        class CartServiceImpl {
+            -CartRepository cartRepository
+            ~CartServiceImpl(CartRepository)
+            +getCartForOrder(UUID)
+            +clearCart(UUID)
+        }
+        class CartModule {
+            +createService(CartRepository) CartService
         }
     }
 
@@ -165,8 +175,11 @@ classDiagram
     CartRepository ..> CartDto
     CartMapper ..> Cart
     CartMapper ..> CartDto
+    
     CartServiceImpl ..|> CartService
     CartServiceImpl --> CartRepository
+    CartModule ..> CartServiceImpl : creates
+    CartModule ..> CartService : returns
 
     namespace com_ecommerce_cart_adapter {
         class InMemoryCartRepository {
@@ -282,10 +295,15 @@ classDiagram
             +pay(Money) boolean
         }
         class PayOrderUseCase {
-            -OrderRepository orderRepo
             -Map~String,PaymentGateway~ strategies
             -EventBus eventBus
             +execute(PayOrderInput) PayOrderOutput
+        }
+        class PayOrderInput {
+            <<record>>
+            +UUID orderId
+            +Money amount
+            +String paymentMethod
         }
         class PaymentSucceededEvent {
             <<record>>
@@ -294,9 +312,9 @@ classDiagram
         }
     }
 
-    PayOrderUseCase --> OrderRepository
     PayOrderUseCase --> PaymentGateway
     PayOrderUseCase ..> EventBus : publishes
+    PayOrderUseCase ..> PayOrderInput
     PaymentSucceededEvent --|> DomainEvent
 
     namespace com_ecommerce_payment_adapter {
@@ -327,5 +345,5 @@ classDiagram
     Main --> PaymentController
     Main --> EventBus
     Main --> OrderPaymentEventHandler
-    Main --> CartServiceImpl
+    Main --> CartModule
 ```

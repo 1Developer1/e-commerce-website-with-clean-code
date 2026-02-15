@@ -1,13 +1,15 @@
-package com.ecommerce.cart.usecase;
+package com.ecommerce.cart.internal;
 
+import com.ecommerce.cart.api.CartService;
+import com.ecommerce.cart.usecase.CartRepository;
 import com.ecommerce.cart.usecase.dto.CartDto;
 import java.util.Optional;
 import java.util.UUID;
 
-public class CartServiceImpl implements CartService {
+class CartServiceImpl implements CartService {
     private final CartRepository cartRepository;
 
-    public CartServiceImpl(CartRepository cartRepository) {
+    CartServiceImpl(CartRepository cartRepository) {
         this.cartRepository = cartRepository;
     }
 

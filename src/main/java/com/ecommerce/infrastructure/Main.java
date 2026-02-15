@@ -39,8 +39,8 @@ import com.ecommerce.payment.usecase.PayOrderInput;
 import com.ecommerce.payment.usecase.PayOrderOutput;
 import com.ecommerce.payment.adapter.in.controller.PaymentController;
 
-import com.ecommerce.cart.usecase.CartService;
-import com.ecommerce.cart.usecase.CartServiceImpl;
+import com.ecommerce.cart.api.CartService;
+import com.ecommerce.cart.internal.CartModule;
 
 import com.ecommerce.shared.event.EventBus;
 import com.ecommerce.shared.event.SimpleEventBus;
@@ -86,7 +86,7 @@ public class Main {
         };
 
         // Services / Facades
-        CartService cartService = new CartServiceImpl(cartRepository);
+        CartService cartService = CartModule.createService(cartRepository);
 
         AddToCartUseCase addToCartUseCase = new AddToCartUseCase(cartRepository, productRepository);
         ApplyDiscountUseCase applyDiscountUseCase = new ApplyDiscountUseCase(cartRepository, discountProvider);
@@ -98,8 +98,14 @@ public class Main {
         paymentStrategies.put("CREDIT_CARD", new CreditCardAdapter());
         paymentStrategies.put("BANK_TRANSFER", new BankTransferAdapter());
         
-        // Inject EventBus instead of just Repos
-        PayOrderUseCase payOrderUseCase = new PayOrderUseCase(orderRepository, paymentStrategies, eventBus);
+        // Inject EventBus instead of just Repos. OrderRepository is REMOVED.
+        PayOrderUseCase payOrderUseCase = new PayOrderUseCase(paymentStrategies, eventBus);
+
+        // Shipping Module Wiring (Event Driven)
+        com.ecommerce.shipping.usecase.port.ShippingRepository shippingRepository = new com.ecommerce.shipping.adapter.out.persistence.InMemoryShipmentRepository();
+        com.ecommerce.shipping.usecase.CreateShipmentUseCase createShipmentUseCase = new com.ecommerce.shipping.usecase.CreateShipmentUseCase(shippingRepository);
+        // Handler registers itself to EventBus
+        new com.ecommerce.shipping.adapter.in.event.OrderPaidEventHandler(createShipmentUseCase, eventBus);
 
         // 3. Interface Adapters / Controllers
         ProductController productController = new ProductController(createProductUseCase, listProductsUseCase);
@@ -147,7 +153,8 @@ public class Main {
         
         // Step 6: Pay Order
         System.out.println("\n[6] Paying Order...");
-        PayOrderInput payInput = new PayOrderInput(orderOutput.orderId(), "CREDIT_CARD");
+        // Assuming Order Output gives total amount as BigDecimal, creating Money object
+        PayOrderInput payInput = new PayOrderInput(orderOutput.orderId(), com.ecommerce.shared.domain.Money.of(orderOutput.totalAmount(), "USD"), "CREDIT_CARD");
         PayOrderOutput payOutput = paymentController.payOrder(payInput);
         System.out.println("Payment Result: " + payOutput.success() + " (" + payOutput.message() + ")");
         
