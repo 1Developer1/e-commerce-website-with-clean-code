@@ -2,13 +2,13 @@ package com.ecommerce.shipping.adapter.in.event;
 
 import com.ecommerce.payment.usecase.event.PaymentSucceededEvent;
 import com.ecommerce.shared.event.EventBus;
-import com.ecommerce.shipping.usecase.CreateShipmentUseCase;
+import com.ecommerce.shipping.api.ShippingService;
 
 public class OrderPaidEventHandler {
-    private final CreateShipmentUseCase createShipmentUseCase;
+    private final ShippingService shippingService;
 
-    public OrderPaidEventHandler(CreateShipmentUseCase createShipmentUseCase, EventBus eventBus) {
-        this.createShipmentUseCase = createShipmentUseCase;
+    public OrderPaidEventHandler(ShippingService shippingService, EventBus eventBus) {
+        this.shippingService = shippingService;
         eventBus.subscribe(PaymentSucceededEvent.class, this::handle);
     }
 
@@ -17,6 +17,6 @@ public class OrderPaidEventHandler {
         // In a real app, address would come from order details or event
         // For now, we hardcode a dummy address or assume it's part of the context
         String dummyAddress = "123 Clean Arch St, Code City";
-        createShipmentUseCase.execute(event.orderId(), dummyAddress);
+        shippingService.createShipment(event.orderId(), dummyAddress);
     }
 }

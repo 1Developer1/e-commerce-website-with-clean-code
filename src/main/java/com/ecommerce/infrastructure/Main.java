@@ -101,11 +101,18 @@ public class Main {
         // Inject EventBus instead of just Repos. OrderRepository is REMOVED.
         PayOrderUseCase payOrderUseCase = new PayOrderUseCase(paymentStrategies, eventBus);
 
-        // Shipping Module Wiring (Event Driven)
+        // Shipping Module Wiring (Event Driven + API)
         com.ecommerce.shipping.usecase.port.ShippingRepository shippingRepository = new com.ecommerce.shipping.adapter.out.persistence.InMemoryShipmentRepository();
-        com.ecommerce.shipping.usecase.CreateShipmentUseCase createShipmentUseCase = new com.ecommerce.shipping.usecase.CreateShipmentUseCase(shippingRepository);
-        // Handler registers itself to EventBus
-        new com.ecommerce.shipping.adapter.in.event.OrderPaidEventHandler(createShipmentUseCase, eventBus);
+        com.ecommerce.shipping.usecase.port.ShippingProvider shippingProvider = new com.ecommerce.shipping.adapter.out.provider.DummyShippingProvider();
+        
+        // UseCases (Still instantiated for internal use by Factory)
+        com.ecommerce.shipping.usecase.CreateShipmentUseCase createShipmentUseCase = new com.ecommerce.shipping.usecase.CreateShipmentUseCase(shippingRepository, shippingProvider);
+        
+        // Shipping API (Facade) - Created via Factory
+        com.ecommerce.shipping.api.ShippingService shippingService = com.ecommerce.shipping.internal.ShippingModule.createService(shippingRepository, createShipmentUseCase);
+        
+        // Handler registers itself to EventBus (Now uses Service)
+        new com.ecommerce.shipping.adapter.in.event.OrderPaidEventHandler(shippingService, eventBus);
 
         // 3. Interface Adapters / Controllers
         ProductController productController = new ProductController(createProductUseCase, listProductsUseCase);
@@ -157,6 +164,15 @@ public class Main {
         PayOrderInput payInput = new PayOrderInput(orderOutput.orderId(), com.ecommerce.shared.domain.Money.of(orderOutput.totalAmount(), "USD"), "CREDIT_CARD");
         PayOrderOutput payOutput = paymentController.payOrder(payInput);
         System.out.println("Payment Result: " + payOutput.success() + " (" + payOutput.message() + ")");
+        
+        // Step 7: Track Shipment
+        System.out.println("\n[7] Tracking Shipment...");
+        // Wait a bit for async event processing (in real world). Here it's synchronous but good to check.
+        java.util.Optional<com.ecommerce.shipping.api.dto.ShipmentDto> shipmentOpt = shippingService.trackShipment(orderOutput.orderId());
+        shipmentOpt.ifPresentOrElse(
+            s -> System.out.println("Shipment Tracking: " + s.trackingCode() + " [" + s.status() + "] to " + s.address()),
+            () -> System.out.println("Shipment not found yet.")
+        );
         
         System.out.println("\n--- Scenario Completed ---");
     }
