@@ -112,9 +112,9 @@ classDiagram
 
 ---
 
-## 🛡️ SRE & Production Readiness (Release It!)
+## 🛡️ SRE & Production Readiness
 
-The platform goes beyond architecture to guarantee extreme stability and fault-tolerance in chaotic production environments. We applied Michael Nygard's architecture layers to complement Clean Architecture:
+The platform goes beyond architecture to guarantee extreme stability and fault-tolerance in chaotic production environments. We applied foundational SRE architecture layers to complement Clean Architecture:
 
 ### 1. Foundation (Infrastructure & Environment)
 *The bare metal or containerized environment that physically bounds the application.*
