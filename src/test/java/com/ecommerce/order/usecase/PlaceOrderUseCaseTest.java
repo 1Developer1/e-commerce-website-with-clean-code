@@ -48,7 +48,7 @@ class PlaceOrderUseCaseTest {
         Assertions.assertTrue(output.success());
         Assertions.assertNotNull(output.orderId());
         Assertions.assertEquals("CREATED", output.status());
-        Assertions.assertEquals(new BigDecimal("20.00"), output.totalAmount());
+        Assertions.assertEquals(0, new BigDecimal("20.00").compareTo(output.totalAmount()));
 
         // Verify Cart is cleared
         verify(cartService, times(1)).clearCart(userId);

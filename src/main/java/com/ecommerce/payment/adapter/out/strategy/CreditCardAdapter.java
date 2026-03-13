@@ -26,7 +26,11 @@ public class CreditCardAdapter implements PaymentGateway {
     private final Retry retry;
     private final TimeLimiter timeLimiter;
 
-    public CreditCardAdapter() {
+    private final String apiUrl;
+
+    public CreditCardAdapter(String apiUrl) {
+        this.apiUrl = apiUrl;
+
         CircuitBreakerConfig cbConfig = CircuitBreakerConfig.custom()
             .failureRateThreshold(50)
             .waitDurationInOpenState(Duration.ofSeconds(15))
@@ -64,13 +68,30 @@ public class CreditCardAdapter implements PaymentGateway {
         try {
             return decoratedCall.call();
         } catch (Exception e) {
+            logger.warn("[CreditCardAdapter-Fallback] Exception captured by Resilience4j: " + e.getMessage());
             return fallbackPayment();
         }
     }
 
     protected boolean simulateExternalPayment(Money amount) {
-        logger.info("[CreditCardAdapter] Dış Ödeme API'si çağrılıyor... (" + amount + ")");
-        return true; 
+        logger.info("[CreditCardAdapter] Dış Ödeme API'si çağrılıyor... (" + amount + ") to " + apiUrl);
+        try {
+            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create(apiUrl + "/api/charge"))
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString("{\"amount\": " + amount.getAmount() + "}"))
+                    .build();
+
+            java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 500) {
+                throw new RuntimeException("External payment service returned 500");
+            }
+            return true; 
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Network/IO Error: " + e.getClass().getName() + " - " + e.getMessage(), e);
+        }
     }
 
     private boolean fallbackPayment() {

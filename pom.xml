@@ -111,6 +111,12 @@
             <version>5.2.0</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock-standalone</artifactId>
+            <version>3.3.1</version>
+            <scope>test</scope>
+        </dependency>
         <!-- ArchUnit for Architecture Testing -->
         <dependency>
             <groupId>com.tngtech.archunit</groupId>

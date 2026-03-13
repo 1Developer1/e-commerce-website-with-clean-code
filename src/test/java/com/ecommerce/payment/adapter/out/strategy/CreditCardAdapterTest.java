@@ -17,14 +17,19 @@ class CreditCardAdapterTest {
 
     @BeforeEach
     void setUp() {
-        adapter = new CreditCardAdapter();
+        adapter = new CreditCardAdapter("http://localhost:8081");
         testAmount = Money.of(new BigDecimal("100.00"), "USD");
     }
 
     @Test
     void testSuccessfulPayment() {
-        // Given normal conditions, the adapter should return true
-        boolean result = adapter.pay(testAmount);
+        CreditCardAdapter fastAdapter = new CreditCardAdapter("http://localhost:8081") {
+            @Override
+            protected boolean simulateExternalPayment(Money amount) {
+                return true;
+            }
+        };
+        boolean result = fastAdapter.pay(testAmount);
         assertTrue(result, "Normal payment should succeed.");
     }
     
@@ -35,7 +40,7 @@ class CreditCardAdapterTest {
         // HOWEVER, because we also have a Retry(maxAttempts=3) configured AROUND the TimeLimiter,
         // it will retry the TimeoutException 3 times before finally giving up.
         // Total expected time: 3s + 500ms + 3s + 500ms + 3s = ~10 seconds.
-        CreditCardAdapter slowAdapter = new CreditCardAdapter() {
+        CreditCardAdapter slowAdapter = new CreditCardAdapter("http://localhost:8081") {
             @Override
             protected boolean simulateExternalPayment(Money amount) {
                 try {
@@ -58,7 +63,7 @@ class CreditCardAdapterTest {
     @Test
     void testCircuitBreakerOpensAfterFailures() {
         // Test CircuitBreaker by forcing failures to cross the 50% rate threshold.
-        CreditCardAdapter failingAdapter = new CreditCardAdapter() {
+        CreditCardAdapter failingAdapter = new CreditCardAdapter("http://localhost:8081") {
             @Override
             protected boolean simulateExternalPayment(Money amount) {
                  // Always fail this mock so Retry exhausts itself cleanly and Circuit receives failures.

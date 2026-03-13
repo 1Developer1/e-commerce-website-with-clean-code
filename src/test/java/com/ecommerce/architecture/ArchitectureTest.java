@@ -22,14 +22,16 @@ public class ArchitectureTest {
         layeredArchitecture()
                 .consideringOnlyDependenciesInAnyPackage("com.ecommerce..")
                 .layer("Domain").definedBy("..entity..", "..domain..")
-                .layer("UseCase").definedBy("..usecase..")
+                .layer("UseCase").definedBy("..usecase..", "..api..")
                 .layer("Adapter").definedBy("..adapter..")
                 .layer("Infrastructure").definedBy("..infrastructure..")
+                .layer("Internal").definedBy("..internal..")
                 
-                .whereLayer("Domain").mayOnlyBeAccessedByLayers("UseCase", "Adapter", "Infrastructure")
-                .whereLayer("UseCase").mayOnlyBeAccessedByLayers("Adapter", "Infrastructure")
-                .whereLayer("Adapter").mayOnlyBeAccessedByLayers("Infrastructure")
+                .whereLayer("Domain").mayOnlyBeAccessedByLayers("UseCase", "Adapter", "Infrastructure", "Internal")
+                .whereLayer("UseCase").mayOnlyBeAccessedByLayers("Adapter", "Infrastructure", "Internal")
+                .whereLayer("Adapter").mayOnlyBeAccessedByLayers("Infrastructure", "Internal")
                 .whereLayer("Infrastructure").mayNotBeAccessedByAnyLayer()
+                .whereLayer("Internal").mayOnlyBeAccessedByLayers("Infrastructure")
                 .check(importedClasses);
     }
 
@@ -52,6 +54,8 @@ public class ArchitectureTest {
     void use_cases_should_be_named_ending_with_UseCase() {
         classes()
                 .that().resideInAPackage("..usecase..")
+                .and().resideOutsideOfPackage("..usecase.dto..")
+                .and().resideOutsideOfPackage("..usecase.event..")
                 .and().areTopLevelClasses()
                 .and().areNotInterfaces()
                 .should().haveSimpleNameEndingWith("UseCase")

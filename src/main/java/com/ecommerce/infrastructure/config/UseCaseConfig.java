@@ -128,8 +128,9 @@ public class UseCaseConfig {
 
     @Bean
     public Map<String, PaymentGateway> paymentStrategies() {
+        String paymentApiUrl = System.getenv("PAYMENT_API_URL") != null ? System.getenv("PAYMENT_API_URL") : "http://localhost:8081";
         Map<String, PaymentGateway> strategies = new HashMap<>();
-        strategies.put("CREDIT_CARD", new CreditCardAdapter());
+        strategies.put("CREDIT_CARD", new CreditCardAdapter(paymentApiUrl));
         strategies.put("BANK_TRANSFER", new BankTransferAdapter());
         return strategies;
     }
@@ -141,7 +142,8 @@ public class UseCaseConfig {
 
     @Bean
     public ShippingProvider shippingProvider() {
-        return new DummyShippingProvider();
+        String shippingApiUrl = System.getenv("SHIPPING_API_URL") != null ? System.getenv("SHIPPING_API_URL") : "http://localhost:8081";
+        return new DummyShippingProvider(shippingApiUrl);
     }
 
     @Bean
@@ -165,24 +167,5 @@ public class UseCaseConfig {
         return new OrderPaidEventHandler(shippingService, eventBus);
     }
 
-    // --- CONTROLLERS (Delivery Mechanism) ---
-    @Bean
-    public ProductController productController(CreateProductUseCase createProductUseCase, ListProductsUseCase listProductsUseCase) {
-        return new ProductController(createProductUseCase, listProductsUseCase);
-    }
-
-    @Bean
-    public CartController cartController(AddToCartUseCase addToCartUseCase, ApplyDiscountUseCase applyDiscountUseCase) {
-        return new CartController(addToCartUseCase, applyDiscountUseCase);
-    }
-
-    @Bean
-    public OrderController orderController(PlaceOrderUseCase placeOrderUseCase) {
-        return new OrderController(placeOrderUseCase);
-    }
-
-    @Bean
-    public PaymentController paymentController(PayOrderUseCase payOrderUseCase) {
-        return new PaymentController(payOrderUseCase);
-    }
+    // Controllers are now decorated with @RestController and auto-discovered by Spring Boot.
 }

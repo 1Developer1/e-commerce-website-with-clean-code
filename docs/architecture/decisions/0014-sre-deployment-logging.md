@@ -4,7 +4,7 @@
 **Durum:** Accepted (Kabul Edildi)
 
 ## Bağlam (Context)
-Uygulamanın çekirdek iş mantığını (Clean Architecture) ve taktiksel SRE zırhlarını (Resilience4j) tamamladık. Ancak sistemin bulut (Cloud/Kubernetes) ortamlarında güvenli bir şekilde koşturulması, hataların izlenebilmesi ve ortam değişkenlerinin yönetilebilmesi için altyapısal bileşenlere ihtiyaç var. "12-Factor App" ilkeleri ve "Release It!" (Nygard) standartları gereği hard-coded yapılandırmalardan ve okunaksız log formatlarından kurtulmamız gerekiyor.
+Uygulamanın çekirdek iş mantığını (Clean Architecture) ve taktiksel SRE zırhlarını (Resilience4j) tamamladık. Ancak sistemin bulut (Cloud/Kubernetes) ortamlarında güvenli bir şekilde koşturulması, hataların izlenebilmesi ve ortam değişkenlerinin yönetilebilmesi için altyapısal bileşenlere ihtiyaç var. "12-Factor App" ilkeleri ve SRE (Site Reliability Engineering) standartları gereği hard-coded yapılandırmalardan ve okunaksız log formatlarından kurtulmamız gerekiyor.
 
 Değerlendirilen Seçenekler (Loglama):
 1. `System.out.println` (Mevcut yapı, log toplayıcılar için uygun değil).

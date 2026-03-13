@@ -26,7 +26,11 @@ public class DummyShippingProvider implements ShippingProvider {
     private final Retry retry;
     private final TimeLimiter timeLimiter;
 
-    public DummyShippingProvider() {
+    private final String apiUrl;
+
+    public DummyShippingProvider(String apiUrl) {
+        this.apiUrl = apiUrl;
+        
         // Circuit Breaker: Açılması için %50 hata oranı veya yavaşlık
         CircuitBreakerConfig cbConfig = CircuitBreakerConfig.custom()
             .failureRateThreshold(50)
@@ -70,15 +74,30 @@ public class DummyShippingProvider implements ShippingProvider {
         try {
             return decoratedCall.call();
         } catch (Exception e) {
-            // Log fallback error if needed
+            logger.warn("[DummyShippingProvider-Fallback] Exception captured by Resilience4j: " + e.getMessage());
             return fallbackTrackingCode();
         }
     }
 
     private String simulateExternalApi(String address) {
-        logger.info("[DummyShippingProvider] Dış API çağrılıyor... (Adres: " + address + ")");
-        // Rastgele gecikme veya hata simülasyonu yapılabilir
-        return "TRK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        logger.info("[DummyShippingProvider] Dış API çağrılıyor... (Adres: " + address + ") to " + apiUrl);
+        try {
+            java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create(apiUrl + "/api/shipment"))
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString("{\"address\": \"" + address + "\"}"))
+                    .build();
+
+            java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 500) {
+                // Trigger circuit breaker or retry
+                throw new RuntimeException("External shipping service returned 500");
+            }
+            return "TRK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        } catch (Exception e) {
+            throw new RuntimeException("Network/IO Error", e);
+        }
     }
 
     private String fallbackTrackingCode() {
