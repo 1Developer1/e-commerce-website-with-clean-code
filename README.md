@@ -117,31 +117,31 @@ classDiagram
 The platform goes beyond architecture to guarantee extreme stability and fault-tolerance in chaotic production environments. We applied foundational SRE architecture layers to complement Clean Architecture:
 
 ### 1. Foundation (Infrastructure & Environment)
-*The bare metal or containerized environment that physically bounds the application.*
+*The bare metal or containerized environment and base technical capabilities.*
+*   **Web Server & Database:** Built on embedded **Apache Tomcat** via Spring Boot, with **H2 Database (In-Memory) / Spring Data JPA** handling persistence seamlessly at the Infrastructure layer.
 *   **Container Security & Sizing:** Included a **Multi-Stage Dockerfile** relying on `eclipse-temurin:17-jre-alpine`. It restricts file permissions, strips tooling, and runs exclusively as `ecommerceuser` (non-root).
-*   **12-Factor App Config:** Ports and pool configurations are externalized through `.env` (`dotenv-java`), completely removing hard-coded properties.
-*   **Telemetry:** Console messages are disabled in favor of asynchronous **JSON Logging (`SLF4J` + `Logback`)** targeting stdout, ready for robust ELK/Datadog scraping.
+*   **12-Factor App Config:** Application port, DB connection, and pool configurations are externalized through `.env` (`dotenv-java`) mapped to `application.yml`, completely removing hard-coded properties.
 *   **Physical Bulkheads (Kubernetes):** Enforced `limits` and `requests` mapping to prevent unbounded CPU (`500m`) and Memory (`512Mi`) spikes across cluster nodes in `k8s/deployment.yaml`.
 
 ### 2. Interconnect (Integration Points)
 *The communication lines handling external APIs, databases, and message buses where cascading failures typically originate.*
-*   All outbound network boundaries (Adapters mapping to APIs like Bank and Cargo) are heavily guarded using **Resilience4j Armor**:
+*   All outbound network boundaries (Adapters mapping to APIs like Bank and Cargo) are guarded using **Resilience4j Armor**:
     *   **Timeouts (`TimeLimiter`):** Prevents blocking threads against slow third-party responses.
     *   **Circuit Breakers:** Detects consecutive failures and halts outgoing traffic instantly.
     *   **Logical Bulkheads:** Limits concurrent traffic executing on external Adapters protecting our native Thread Pools.
     *   **Retries:** Exponential backoffs implemented for intermittent network errors.
-*   **EventBus:** Asynchronous internal service communication (e.g., Shipping reacting to Payments) is detached using a Pub/Sub mechanism to avoid blocking the main thread.
 
 ### 3. Control Plane (Governance & Health)
-*The management layer that observers and steers the instances, typically interacting with Kubernetes or Load Balancers.*
-*   Exposes a custom Java-native `HealthServer` resolving basic `/health/liveness` (reporting process validity) and `/health/readiness` (reporting traffic capacity) endpoints.
-*   **Disposability & Graceful Shutdown**: JVM handles `SIGTERM` gracefully: pauses Health endpoints (switching readiness to `false`), grants a 3-second grace period for inflight executions to wrap up, and then safely shuts down.
+*The management layer that observes and steers the instances.*
+*   **Spring Boot Actuator:** Exposes production-ready features such as `/actuator/health`, `/actuator/metrics`, and `/actuator/info` to monitor the application context, database health, and system readiness.
+*   **Disposability & Graceful Shutdown**: JVM handles `SIGTERM` gracefully via Spring Boot lifecycle hooks, granting a grace period for inflight requests to wrap up before shutting down the Tomcat context.
 
 ### 4. Instances (Application Workloads)
-*The scaled replicas executing the core domain rules.*
-*   **Clean Architecture Rules**: The `com.ecommerce.domain` and `usecase` layers remain purely synchronous, testable, and completely detached from the infrastructure chaos.
-*   **Stateless Replication**: Kubernetes `deployment.yaml` specifies `replicas: 2`, allowing horizontal scaling and seamless self-healing since the application instances maintain no local state.
-    
+*The scaled replicas executing the core domain rules and HTTP endpoints.*
+*   **HTTP Controllers:** Standard Spring `@RestController` implementations exposed on standard ports, mapping directly to independent Use Case facades.
+*   **Clean Architecture Rules**: The `com.ecommerce.domain` and `usecase` layers remain purely synchronous, testable, and completely detached from Spring Boot, JPA, or network protocols.
+*   **Stateless Replication**: Kubernetes `deployment.yaml` specifies horizontal scaling, and seamless self-healing since the application instances maintain no local state.
+
 ---
 
 ## 🛠️ Architecture Enforcement Checks

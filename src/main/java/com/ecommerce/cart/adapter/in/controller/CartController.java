@@ -7,6 +7,13 @@ import com.ecommerce.cart.usecase.ApplyDiscountInput;
 import com.ecommerce.cart.usecase.ApplyDiscountOutput;
 import com.ecommerce.cart.usecase.ApplyDiscountUseCase;
 
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+@RestController
+@RequestMapping("/cart")
 public class CartController {
     private final AddToCartUseCase addToCartUseCase;
     private final ApplyDiscountUseCase applyDiscountUseCase;
@@ -16,11 +23,13 @@ public class CartController {
         this.applyDiscountUseCase = applyDiscountUseCase;
     }
 
-    public AddToCartOutput addToCart(AddToCartInput input) {
+    @PostMapping("/add")
+    public AddToCartOutput addToCart(@RequestBody AddToCartInput input) {
         return addToCartUseCase.execute(input);
     }
 
-    public ApplyDiscountOutput applyDiscount(ApplyDiscountInput input) {
+    @PostMapping("/discount")
+    public ApplyDiscountOutput applyDiscount(@RequestBody ApplyDiscountInput input) {
         return applyDiscountUseCase.execute(input);
     }
 }

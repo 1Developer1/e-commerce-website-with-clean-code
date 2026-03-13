@@ -68,7 +68,7 @@ public class CreditCardAdapter implements PaymentGateway {
         }
     }
 
-    private boolean simulateExternalPayment(Money amount) {
+    protected boolean simulateExternalPayment(Money amount) {
         logger.info("[CreditCardAdapter] Dış Ödeme API'si çağrılıyor... (" + amount + ")");
         return true; 
     }

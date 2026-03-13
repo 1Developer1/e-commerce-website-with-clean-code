@@ -30,8 +30,22 @@ public class Order {
         this.totalAmount = calculateTotal();
     }
     
+    private Order(UUID id, UUID userId, List<OrderItem> items, Money discount, Status status, LocalDateTime createdAt, Money totalAmount) {
+        this.id = id;
+        this.userId = userId;
+        this.items = items;
+        this.discount = discount != null ? discount : new Money(BigDecimal.ZERO, "USD");
+        this.status = status;
+        this.createdAt = createdAt;
+        this.totalAmount = totalAmount;
+    }
+
     public static Order create(UUID userId, List<OrderItem> items, Money discount) {
         return new Order(UUID.randomUUID(), userId, items, discount);
+    }
+    
+    public static Order restore(UUID id, UUID userId, List<OrderItem> items, Money discount, Status status, LocalDateTime createdAt, Money totalAmount) {
+        return new Order(id, userId, items, discount, status, createdAt, totalAmount);
     }
     
     private Money calculateTotal() {
@@ -54,6 +68,10 @@ public class Order {
     
     public UUID getUserId() {
         return userId;
+    }
+
+    public Money getDiscount() {
+        return discount;
     }
 
     public List<OrderItem> getItems() {

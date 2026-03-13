@@ -4,6 +4,13 @@ import com.ecommerce.order.usecase.PlaceOrderInput;
 import com.ecommerce.order.usecase.PlaceOrderOutput;
 import com.ecommerce.order.usecase.PlaceOrderUseCase;
 
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+@RestController
+@RequestMapping("/orders")
 public class OrderController {
     private final PlaceOrderUseCase placeOrderUseCase;
 
@@ -11,7 +18,8 @@ public class OrderController {
         this.placeOrderUseCase = placeOrderUseCase;
     }
 
-    public PlaceOrderOutput placeOrder(PlaceOrderInput input) {
+    @PostMapping
+    public PlaceOrderOutput placeOrder(@RequestBody PlaceOrderInput input) {
         return placeOrderUseCase.execute(input);
     }
 }

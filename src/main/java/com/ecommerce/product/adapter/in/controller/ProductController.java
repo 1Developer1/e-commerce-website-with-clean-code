@@ -6,6 +6,14 @@ import com.ecommerce.product.usecase.CreateProductUseCase;
 import com.ecommerce.product.usecase.ListProductsOutput;
 import com.ecommerce.product.usecase.ListProductsUseCase;
 
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+@RestController
+@RequestMapping("/products")
 public class ProductController {
     private final CreateProductUseCase createProductUseCase;
     private final ListProductsUseCase listProductsUseCase;
@@ -15,10 +23,12 @@ public class ProductController {
         this.listProductsUseCase = listProductsUseCase;
     }
 
-    public CreateProductOutput createProduct(CreateProductInput input) {
+    @PostMapping
+    public CreateProductOutput createProduct(@RequestBody CreateProductInput input) {
         return createProductUseCase.execute(input);
     }
     
+    @GetMapping
     public ListProductsOutput listProducts() {
         return listProductsUseCase.execute();
     }

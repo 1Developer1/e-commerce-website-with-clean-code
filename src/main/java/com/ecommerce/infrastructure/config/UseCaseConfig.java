@@ -1,0 +1,188 @@
+package com.ecommerce.infrastructure.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+
+import com.ecommerce.cart.adapter.out.persistence.InMemoryCartRepository;
+import com.ecommerce.cart.usecase.AddToCartUseCase;
+import com.ecommerce.cart.usecase.CartRepository;
+import com.ecommerce.cart.usecase.ApplyDiscountUseCase;
+import com.ecommerce.cart.usecase.port.DiscountProvider;
+import com.ecommerce.cart.api.CartService;
+import com.ecommerce.cart.internal.CartModule;
+
+import com.ecommerce.order.adapter.out.persistence.InMemoryOrderRepository;
+import com.ecommerce.order.usecase.OrderRepository;
+import com.ecommerce.order.usecase.PlaceOrderUseCase;
+import com.ecommerce.order.adapter.in.event.OrderPaymentEventHandler;
+
+import com.ecommerce.shipping.adapter.in.event.OrderPaidEventHandler;
+
+import com.ecommerce.product.adapter.out.persistence.InMemoryProductRepository;
+import com.ecommerce.product.usecase.CreateProductUseCase;
+import com.ecommerce.product.usecase.ListProductsUseCase;
+import com.ecommerce.product.usecase.ProductRepository;
+
+import com.ecommerce.discount.usecase.DiscountRepository;
+import com.ecommerce.discount.adapter.out.persistence.InMemoryDiscountRepository;
+import com.ecommerce.discount.usecase.GetDiscountUseCase;
+import com.ecommerce.discount.usecase.GetDiscountInput;
+import com.ecommerce.discount.usecase.GetDiscountOutput;
+
+import com.ecommerce.payment.usecase.port.PaymentGateway;
+import com.ecommerce.payment.adapter.out.strategy.CreditCardAdapter;
+import com.ecommerce.payment.adapter.out.strategy.BankTransferAdapter;
+import com.ecommerce.payment.usecase.PayOrderUseCase;
+
+import com.ecommerce.shipping.usecase.port.ShippingRepository;
+import com.ecommerce.shipping.adapter.out.persistence.InMemoryShipmentRepository;
+import com.ecommerce.shipping.usecase.port.ShippingProvider;
+import com.ecommerce.shipping.adapter.out.provider.DummyShippingProvider;
+import com.ecommerce.shipping.usecase.CreateShipmentUseCase;
+import com.ecommerce.shipping.api.ShippingService;
+import com.ecommerce.shipping.internal.ShippingModule;
+import com.ecommerce.shared.event.EventBus;
+import com.ecommerce.shared.event.SimpleEventBus;
+
+import com.ecommerce.product.adapter.in.controller.ProductController;
+import com.ecommerce.cart.adapter.in.controller.CartController;
+import com.ecommerce.order.adapter.in.controller.OrderController;
+import com.ecommerce.payment.adapter.in.controller.PaymentController;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+
+@Configuration
+public class UseCaseConfig {
+
+    @Bean
+    public EventBus eventBus() {
+        return new SimpleEventBus();
+    }
+
+    // --- REPOSITORIES (In-Memory for now) ---
+    // Product and Order repositories are now provided by JPA Persistence Adapters via @Component scanning
+
+    @Bean
+    public CartRepository cartRepository() {
+        return new InMemoryCartRepository();
+    }
+
+    @Bean
+    public DiscountRepository discountRepository() {
+        InMemoryDiscountRepository repo = new InMemoryDiscountRepository();
+        repo.save(com.ecommerce.discount.entity.Discount.create("SUMMER10", com.ecommerce.shared.domain.Money.of(new BigDecimal("10.00"), "USD")));
+        return repo;
+    }
+
+    @Bean
+    public ShippingRepository shippingRepository() {
+        return new InMemoryShipmentRepository();
+    }
+
+    // --- USE CASES & SERVICES ---
+    @Bean
+    public CreateProductUseCase createProductUseCase(ProductRepository productRepository) {
+        return new CreateProductUseCase(productRepository);
+    }
+
+    @Bean
+    public ListProductsUseCase listProductsUseCase(ProductRepository productRepository) {
+        return new ListProductsUseCase(productRepository);
+    }
+
+    @Bean
+    public GetDiscountUseCase getDiscountUseCase(DiscountRepository discountRepository) {
+        return new GetDiscountUseCase(discountRepository);
+    }
+
+    @Bean
+    public AddToCartUseCase addToCartUseCase(CartRepository cartRepository, ProductRepository productRepository) {
+        return new AddToCartUseCase(cartRepository, productRepository);
+    }
+
+    @Bean
+    public DiscountProvider discountProvider(GetDiscountUseCase getDiscountUseCase) {
+        return (cart, code) -> {
+            GetDiscountOutput output = getDiscountUseCase.execute(new GetDiscountInput(code));
+            return output.isValid() ? java.util.Optional.of(output.amount()) : java.util.Optional.empty();
+        };
+    }
+
+    @Bean
+    public ApplyDiscountUseCase applyDiscountUseCase(CartRepository cartRepository, DiscountProvider discountProvider) {
+        return new ApplyDiscountUseCase(cartRepository, discountProvider);
+    }
+
+    @Bean
+    public CartService cartService(CartRepository cartRepository) {
+        return CartModule.createService(cartRepository);
+    }
+
+    @Bean
+    public PlaceOrderUseCase placeOrderUseCase(OrderRepository orderRepository, CartService cartService) {
+        return new PlaceOrderUseCase(orderRepository, cartService);
+    }
+
+    @Bean
+    public Map<String, PaymentGateway> paymentStrategies() {
+        Map<String, PaymentGateway> strategies = new HashMap<>();
+        strategies.put("CREDIT_CARD", new CreditCardAdapter());
+        strategies.put("BANK_TRANSFER", new BankTransferAdapter());
+        return strategies;
+    }
+
+    @Bean
+    public PayOrderUseCase payOrderUseCase(Map<String, PaymentGateway> paymentStrategies, EventBus eventBus) {
+        return new PayOrderUseCase(paymentStrategies, eventBus);
+    }
+
+    @Bean
+    public ShippingProvider shippingProvider() {
+        return new DummyShippingProvider();
+    }
+
+    @Bean
+    public CreateShipmentUseCase createShipmentUseCase(ShippingRepository shippingRepository, ShippingProvider shippingProvider) {
+        return new CreateShipmentUseCase(shippingRepository, shippingProvider);
+    }
+
+    @Bean
+    public ShippingService shippingService(ShippingRepository shippingRepository, CreateShipmentUseCase createShipmentUseCase) {
+        return ShippingModule.createService(shippingRepository, createShipmentUseCase);
+    }
+
+    // --- EVENT HANDLERS ---
+    @Bean
+    public OrderPaymentEventHandler orderPaymentEventHandler(OrderRepository orderRepository, EventBus eventBus) {
+        return new OrderPaymentEventHandler(orderRepository, eventBus);
+    }
+
+    @Bean
+    public OrderPaidEventHandler orderPaidEventHandler(ShippingService shippingService, EventBus eventBus) {
+        return new OrderPaidEventHandler(shippingService, eventBus);
+    }
+
+    // --- CONTROLLERS (Delivery Mechanism) ---
+    @Bean
+    public ProductController productController(CreateProductUseCase createProductUseCase, ListProductsUseCase listProductsUseCase) {
+        return new ProductController(createProductUseCase, listProductsUseCase);
+    }
+
+    @Bean
+    public CartController cartController(AddToCartUseCase addToCartUseCase, ApplyDiscountUseCase applyDiscountUseCase) {
+        return new CartController(addToCartUseCase, applyDiscountUseCase);
+    }
+
+    @Bean
+    public OrderController orderController(PlaceOrderUseCase placeOrderUseCase) {
+        return new OrderController(placeOrderUseCase);
+    }
+
+    @Bean
+    public PaymentController paymentController(PayOrderUseCase payOrderUseCase) {
+        return new PaymentController(payOrderUseCase);
+    }
+}
