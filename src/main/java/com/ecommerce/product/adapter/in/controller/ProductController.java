@@ -18,7 +18,7 @@ public class ProductController {
     public CreateProductOutput createProduct(CreateProductInput input) {
         return createProductUseCase.execute(input);
     }
-
+    
     public ListProductsOutput listProducts() {
         return listProductsUseCase.execute();
     }

@@ -1,157 +1,197 @@
-# 🏛️ Clean Architecture E-Commerce (Modular Monolith)
+# Clean Architecture E-Commerce System 🛍️🚀
 
-![Java](https://img.shields.io/badge/Java-17%2B-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
-![Architecture](https://img.shields.io/badge/Architecture-Clean%20%2F%20Hexagonal-green?style=for-the-badge)
-![Pattern](https://img.shields.io/badge/Pattern-Modular%20Monolith-blue?style=for-the-badge)
+A robust, production-ready E-Commerce backend built with Java 17, demonstrating strict adherence to **Robert C. Martin's Clean Architecture** principles, SOLID design, and **Site Reliability Engineering (SRE)** patterns.
 
-A reference implementation of a **Modular Monolith** e-commerce system, strictly adhering to **Uncle Bob's Clean Architecture** principles. This project demonstrates how to build maintainable, testable, and loosely coupled software without relying on heavy frameworks for domain logic.
+## 🏛️ Architectural Philosophy
 
----
+This project aims to completely isolate **Enterprise Business Rules (Entities)** and **Application Business Rules (Use Cases)** from external technical details (Databases, Web Frameworks, APIs).
 
-## 🌟 Key Features & Patterns
+*   **The Dependency Rule:** Source code dependencies *only* point inward. Inner layers know absolutely nothing about outer layers.
+*   **Decoupled Modules:** `Product`, `Order`, `Cart`, `Discount`, and `Payment` are strictly encapsulated. They communicate via DTOs, Event-Driven Architecture (Pub/Sub EventBus), and Facade Services, rather than direct entity manipulation.
+*   **Deferred Decisions:** The system runs completely in-memory, deferring the choice of a specific database or web framework (like Spring Boot) until necessary.
 
-*   **Clean Architecture:** Domain logic is independent of frameworks, UI, and Database.
-*   **Modular Monolith:** Functionality is split into isolated modules (`Product`, `Cart`, `Order`, etc.) with strict boundaries.
-*   **Module Facades:** Modules communicate **ONLY** via Public APIs (Interfaces/DTOs). Internal implementation is completely hidden.
-*   **Event-Driven Architecture:** Decoupled integration using Domain Events (e.g., `PaymentSucceededEvent` triggers `Shipping`).
-*   **Ports & Adapters (Hexagonal):**
-    *   **Driving Adapters (In):** Controllers, Event Handlers.
-    *   **Driven Adapters (Out):** Repositories, External Providers.
-*   **Strict Encapsulation:** Implementation classes (`...Impl`) are package-private.
-*   **ADR (Architecture Decision Records):** All major decisions are documented in `docs/adr`.
-
----
-
-## 📦 System Modules
-
-| Module | Description | Key Patterns | Public API (Facade) |
-| :--- | :--- | :--- | :--- |
-| **Product** | Manages product catalog and inventory. | CQRS (Separated Use Cases), Rich Domain Model | `ProductController` (for now) |
-| **Cart** | Handles temporary items for users. | **State Pattern** (Discount logic), **Facade** | `CartService`, `CartDto` |
-| **Discount** | Applies pricing rules to carts. | **Strategy Pattern** (Percent/Fixed), **Factory** | `DiscountRepository` |
-| **Order** | Manages lifecycle of orders. | **Aggregate Root**, **Domain Events** | `PlaceOrderUseCase` |
-| **Payment** | Processes payments via gateways. | **Strategy Pattern** (CreditCard/Bank), **Observer** (EventBus) | `PayOrderUseCase` |
-| **Shipping** | Handles delivery and tracking. | **Event-Driven**, **Module Factory**, **Strict Encapsulation** | `ShippingService`, `ShipmentDto` |
-
----
-
-## 🏗️ Architecture Diagrams
-
-### 1. High-Level Component Structure
-Each module is a self-contained unit. Low-level details (DB, Web) are plugins to the core.
+### Conceptual Component Architecture
 
 ```mermaid
-graph TD
-    %% --- Styles ---
-    classDef infra fill:#fdd,stroke:#333
-    classDef domain fill:#f9f,stroke:#333
-    classDef shared fill:#ccc,stroke:#333,stroke-dasharray: 5 5
+classDiagram
+    %% --- DOMAIN LAYER (Enterprise Business Rules) ---
+    namespace Domain {
+      class Product {
+        +UUID id
+        +String name
+        +Money price
+        +int stockQuantity
+        +create()
+        +decreaseStock()
+      }
+      class Order {
+        +UUID id
+        +List~OrderItem~ items
+        +calculateTotal()
+        +pay()
+      }
+      class Cart {
+        +UUID id
+        +addItem()
+        +getTotalPrice()
+      }
+      class User {
+        +UUID id
+        +String email
+      }
+      class Money {
+        +BigDecimal amount
+        +String currency
+      }
+    }
+    Product -- Money : contains
 
-    subgraph Infrastructure ["Infrastructure Layer (Main / Spring)"]
-        INFRA[com.ecommerce.infrastructure]:::infra
-    end
+    %% --- USE CASE LAYER (Application Business Rules) ---
+    namespace UseCase {
+      class CreateProductUseCase
+      class PlaceOrderUseCase
+      class AddToCartUseCase
+      class ListProductsUseCase
+      class ApplyDiscountUseCase
+      class PayOrderUseCase
+      
+      %% Input/Output Ports (Interfaces)
+      class ProductRepository { <<interface>> }
+      class OrderRepository { <<interface>> }
+      class CartRepository { <<interface>> }
+      class DiscountRepository { <<interface>> }
+      class DiscountProvider { <<interface>> }
+      class PaymentGateway { <<interface>> }
+      
+      %% Events
+      class PaymentSucceededEvent { <<event>> }
+    }
 
-    subgraph Core_Business ["Modular Core"]
-        CART[Module: Cart]:::domain
-        ORDER[Module: Order]:::domain
-        PRODUCT[Module: Product]:::domain
-        PAYMENT[Module: Payment]:::domain
-        SHIPPING[Module: Shipping]:::domain
-    end
+    CreateProductUseCase --> ProductRepository : uses
+    PlaceOrderUseCase --> OrderRepository : uses
+    PlaceOrderUseCase --> CartRepository : uses
+    AddToCartUseCase --> CartRepository : uses
+    AddToCartUseCase --> ProductRepository : uses
+    ApplyDiscountUseCase --> CartRepository : uses
+    ApplyDiscountUseCase --> DiscountProvider : uses
+    PayOrderUseCase --> PaymentGateway : uses
+    PayOrderUseCase ..> PaymentSucceededEvent : publishes
 
-    subgraph Shared_Kernel ["Shared Kernel"]
-        SHARED[com.ecommerce.shared]:::shared
-    end
+    %% --- INTERFACE ADAPTERS LAYER ---
+    namespace Adapters {
+      class ProductController
+      class OrderController
+      class CartController
+      class DiscountController
+      class PaymentController
+      class InMemoryProductRepository
+      class InMemoryOrderRepository
+      class InMemoryCartRepository
+      class InMemoryDiscountRepository
+      class CreditCardAdapter
+      class BankTransferAdapter
+      class OrderPaymentEventHandler
+    }
 
-    INFRA --> CART
-    INFRA --> ORDER
-    INFRA --> PAYMENT
-    INFRA --> SHIPPING
+    %% RELATIONSHIPS
+    ProductController --> CreateProductUseCase : uses
+    OrderController --> PlaceOrderUseCase : uses
+    CartController --> AddToCartUseCase : uses
+    DiscountController --> ApplyDiscountUseCase : uses
+    PaymentController --> PayOrderUseCase : uses
+    OrderPaymentEventHandler ..> PaymentSucceededEvent : subscribes
+    OrderPaymentEventHandler --> OrderRepository : uses
 
-    ORDER --"Uses Facade"--> CART
-    PAYMENT --"Publishes Event"--> SHARED
-    SHIPPING --"Subscribes Event"--> SHARED
-```
-
-### 2. Shipping Module Internals (Strict Encapsulation Example)
-Dış dünya sadece `api` paketini görür. `internal` paket tamamen gizlidir.
-
-```text
-com.ecommerce.shipping
-├── api                  <-- PUBLIC (Safe Zone) 🟢
-│   ├── ShippingService.java (Interface)
-│   └── dto/ShipmentDto.java
-├── internal             <-- PACKAGE-PRIVATE (Hidden) 🔒
-│   ├── ShippingServiceImpl.java
-│   └── ShippingModule.java (Factory)
-├── usecase              <-- CORE LOGIC
-│   ├── CreateShipmentUseCase.java
-│   └── TrackShipmentUseCase.java
-└── adapter              <-- ADAPTERS
-    ├── in/event/OrderPaidEventHandler.java (Listener)
-    └── out/persistence/InMemoryShipmentRepository.java
+    InMemoryProductRepository ..|> ProductRepository : implements
+    InMemoryOrderRepository ..|> OrderRepository : implements
+    InMemoryCartRepository ..|> CartRepository : implements
+    InMemoryDiscountRepository ..|> DiscountRepository : implements
+    CreditCardAdapter ..|> PaymentGateway : implements
+    BankTransferAdapter ..|> PaymentGateway : implements
 ```
 
 ---
 
-## 🛠️ How to Run
+## 🛡️ SRE & Production Readiness (Release It!)
 
-This project is a pure Java application (simulating a DI container in `Main.java`).
+The platform goes beyond architecture to guarantee extreme stability and fault-tolerance in chaotic production environments. We applied Michael Nygard's architecture layers to complement Clean Architecture:
 
-### Prerequisites
-*   Java 17+
-*   Maven 3.8+
+### 1. Foundation (Infrastructure & Environment)
+*The bare metal or containerized environment that physically bounds the application.*
+*   **Container Security & Sizing:** Included a **Multi-Stage Dockerfile** relying on `eclipse-temurin:17-jre-alpine`. It restricts file permissions, strips tooling, and runs exclusively as `ecommerceuser` (non-root).
+*   **12-Factor App Config:** Ports and pool configurations are externalized through `.env` (`dotenv-java`), completely removing hard-coded properties.
+*   **Telemetry:** Console messages are disabled in favor of asynchronous **JSON Logging (`SLF4J` + `Logback`)** targeting stdout, ready for robust ELK/Datadog scraping.
+*   **Physical Bulkheads (Kubernetes):** Enforced `limits` and `requests` mapping to prevent unbounded CPU (`500m`) and Memory (`512Mi`) spikes across cluster nodes in `k8s/deployment.yaml`.
 
-### Build & Run
+### 2. Interconnect (Integration Points)
+*The communication lines handling external APIs, databases, and message buses where cascading failures typically originate.*
+*   All outbound network boundaries (Adapters mapping to APIs like Bank and Cargo) are heavily guarded using **Resilience4j Armor**:
+    *   **Timeouts (`TimeLimiter`):** Prevents blocking threads against slow third-party responses.
+    *   **Circuit Breakers:** Detects consecutive failures and halts outgoing traffic instantly.
+    *   **Logical Bulkheads:** Limits concurrent traffic executing on external Adapters protecting our native Thread Pools.
+    *   **Retries:** Exponential backoffs implemented for intermittent network errors.
+*   **EventBus:** Asynchronous internal service communication (e.g., Shipping reacting to Payments) is detached using a Pub/Sub mechanism to avoid blocking the main thread.
+
+### 3. Control Plane (Governance & Health)
+*The management layer that observers and steers the instances, typically interacting with Kubernetes or Load Balancers.*
+*   Exposes a custom Java-native `HealthServer` resolving basic `/health/liveness` (reporting process validity) and `/health/readiness` (reporting traffic capacity) endpoints.
+*   **Disposability & Graceful Shutdown**: JVM handles `SIGTERM` gracefully: pauses Health endpoints (switching readiness to `false`), grants a 3-second grace period for inflight executions to wrap up, and then safely shuts down.
+
+### 4. Instances (Application Workloads)
+*The scaled replicas executing the core domain rules.*
+*   **Clean Architecture Rules**: The `com.ecommerce.domain` and `usecase` layers remain purely synchronous, testable, and completely detached from the infrastructure chaos.
+*   **Stateless Replication**: Kubernetes `deployment.yaml` specifies `replicas: 2`, allowing horizontal scaling and seamless self-healing since the application instances maintain no local state.
+    
+---
+
+## 🛠️ Architecture Enforcement Checks
+
+The application is heavily guarded against "architectural drift" using unit tests, byte-code analysis, and static metrics:
+
+*   **ArchUnit**: Detects cycle dependencies between modules and ensures inner rings never import frameworks or adapter packages.
+*   **PMD & Checkstyle**: Analyzes complex NPath values, Cyclomatic complexities, and ensures strict Google Java Formatting styles.
+*   **Fitness Functions**: Tests generic scenario lifecycles (order creation timeframes) to prove SLA thresholds.
+
+### Running Enforcement Metrics
+
 ```bash
-# Compile and Run the Console Application
-mvn clean compile
-mvn org.codehaus.mojo:exec-maven-plugin:java -Dexec.mainClass=com.ecommerce.infrastructure.Main
-```
+# Evaluate CheckStyle & PMD Rules
+mvn clean checkstyle:check pmd:check
 
-### Sample Output
-```text
---- E-Commerce System Started ---
-[1] Creating Product...
-[2] Listing Products...
-[3] Adding to Cart...
-[4] Applying Discount...
-[5] Placing Order... (Order Placed: ID=...)
-[6] Paying Order...
-[Event] Order ... status updated to PAID.
-[Shipping] Payment event received...
-[Shipping] Shipment created: ...
-[7] Tracking Shipment...
-Shipment Tracking: ... [PREPARING] to ...
+# Generate JDepend Architecture Dependency Metrics Table in targets
+mvn jdepend:generate
 ```
 
 ---
 
-## 📜 Architecture Decision Records (ADRs)
+## 📦 Quickstart
 
-We document importance decisions in `docs/adr`:
+### Without Docker (Maven CLI)
 
-*   [ADR 0001: Monolithic Structure](docs/adr/0001-record-architecture-decisions.md)
-*   [ADR 0010: Module Facades](docs/adr/0010-module-facade.md)
-*   [ADR 0011: Strict Module Encapsulation](docs/adr/0011-package-by-component.md)
-*   [ADR 0012: Shipping Module Design](docs/adr/0012-shipping-module-design.md)
-*   [ADR 0013: Adaptation Layer Strictness](docs/adr/0013-strict-module-encapsulation.md)
+1. Make sure Java 17+ and Maven 3.8+ are installed.
+2. Clone this repo.
+3. Establish Environment Configuration file:
+    ```bash
+    cp .env.example .env
+    # Modify port allocations if needed
+    ```
+4. Build and run:
+    ```bash
+    mvn clean package
+    mvn exec:java
+    ```
 
----
-
-## 🧪 Quality Gates & Testing
-
-We enforce architecture rules using **ArchUnit** and **Static Analysis**.
+### With Docker / Kubernetes
 
 ```bash
-# Run Architecture Tests
-mvn test
+# Build the Alpine image
+docker build -t ecommerce-app:latest .
 
-# Generate Quality Metrics
-mvn pmd:pmd
-mvn checkstyle:checkstyle
+# Run locally in Docker mapping standard 8080 port
+docker run -p 8080:8080 --env-file .env ecommerce-app:latest
+
+# Or apply straight to a local minikube/kind Kubernetes cluster
+kubectl apply -f k8s/deployment.yaml
 ```
 
----
-
-**Built with ☕ and Clean Code principles.**
+The server automatically starts standard operational scenarios resolving domain-level cart handling, promotions, asynchronous events processing, payment fallbacks logging, and shipment tracking sequentially. Check Terminal output to view structured JSON interactions.

@@ -1,5 +1,9 @@
 package com.ecommerce.infrastructure;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import io.github.cdimascio.dotenv.Dotenv;
+
 import com.ecommerce.cart.adapter.in.controller.CartController;
 import com.ecommerce.cart.adapter.out.persistence.InMemoryCartRepository;
 import com.ecommerce.cart.usecase.AddToCartInput;
@@ -53,7 +57,30 @@ import java.util.Map;
 import java.util.HashMap;
 
 public class Main {
-    public static void main(String[] args) {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    public static void main(String[] args) throws Exception {
+        // 0. Environment Config (.env) via Dotenv
+        Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
+        int appPort = Integer.parseInt(dotenv.get("APP_PORT", "8080"));
+
+        // 0. Control Plane (HealthServer for Kubernetes)
+        com.ecommerce.infrastructure.health.HealthServer healthServer = new com.ecommerce.infrastructure.health.HealthServer(appPort);
+        healthServer.start();
+
+        // Register Graceful Shutdown Hook for 12-Factor App Disposability
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            logger.info("\n[System] SIGTERM received. Initiating Graceful Shutdown...");
+            healthServer.setReady(false); // Stop taking new traffic (Readiness -> 503)
+            try {
+                // Give in-flight requests a few seconds to finish before effectively killing connections
+                Thread.sleep(3000); 
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            healthServer.stop();
+            logger.info("[System] Shutdown complete.");
+        }));
+
         // 0. Shared Infrastructure
         EventBus eventBus = new SimpleEventBus();
 
@@ -121,59 +148,59 @@ public class Main {
         PaymentController paymentController = new PaymentController(payOrderUseCase);
 
         // 4. Scenario Execution
-        System.out.println("--- E-Commerce System Started ---");
+        logger.info("--- E-Commerce System Started ---");
 
         // Step 1: Create Product
-        System.out.println("\n[1] Creating Product...");
+        logger.info("\n[1] Creating Product...");
         CreateProductInput productInput = new CreateProductInput(
             "MacBook Pro", "High-end laptop", new BigDecimal("1999.99"), "USD", 10
         );
         CreateProductOutput productOutput = productController.createProduct(productInput);
-        System.out.println("Product Created: " + productOutput.name() + " (ID: " + productOutput.id() + ")");
+        logger.info("Product Created: " + productOutput.name() + " (ID: " + productOutput.id() + ")");
 
         // Step 2: List Products
-        System.out.println("\n[2] Listing Products...");
+        logger.info("\n[2] Listing Products...");
         ListProductsOutput listOutput = productController.listProducts();
         listOutput.products().forEach(p -> 
-            System.out.println(" - " + p.name() + ": " + p.price() + " " + p.currency())
+            logger.info(" - " + p.name() + ": " + p.price() + " " + p.currency())
         );
 
         // Step 3: Add to Cart
-        System.out.println("\n[3] Adding to Cart...");
+        logger.info("\n[3] Adding to Cart...");
         UUID userId = UUID.randomUUID();
         AddToCartInput cartInput = new AddToCartInput(userId, productOutput.id(), 1);
         AddToCartOutput cartOutput = cartController.addToCart(cartInput);
-        System.out.println("Cart: " + cartOutput.itemsCount() + " items, Total: " + cartOutput.totalAmount() + " " + cartOutput.currency());
+        logger.info("Cart: " + cartOutput.itemsCount() + " items, Total: " + cartOutput.totalAmount() + " " + cartOutput.currency());
 
         // Step 4: Apply Discount
-        System.out.println("\n[4] Applying Discount...");
+        logger.info("\n[4] Applying Discount...");
         ApplyDiscountInput discountInput = new ApplyDiscountInput(userId, "SUMMER10");
         ApplyDiscountOutput discountOutput = cartController.applyDiscount(discountInput);
-        System.out.println("Discount Applied: " + discountOutput.success() + " (" + discountOutput.message() + ")");
-        System.out.println("New Cart Total: " + discountOutput.newTotal());
+        logger.info("Discount Applied: " + discountOutput.success() + " (" + discountOutput.message() + ")");
+        logger.info("New Cart Total: " + discountOutput.newTotal());
 
         // Step 5: Place Order
-        System.out.println("\n[5] Placing Order...");
+        logger.info("\n[5] Placing Order...");
         PlaceOrderInput orderInput = new PlaceOrderInput(userId);
         PlaceOrderOutput orderOutput = orderController.placeOrder(orderInput);
-        System.out.println("Order Placed: ID=" + orderOutput.orderId() + ", Status=" + orderOutput.status() + ", Total=" + orderOutput.totalAmount());
+        logger.info("Order Placed: ID=" + orderOutput.orderId() + ", Status=" + orderOutput.status() + ", Total=" + orderOutput.totalAmount());
         
         // Step 6: Pay Order
-        System.out.println("\n[6] Paying Order...");
+        logger.info("\n[6] Paying Order...");
         // Assuming Order Output gives total amount as BigDecimal, creating Money object
         PayOrderInput payInput = new PayOrderInput(orderOutput.orderId(), com.ecommerce.shared.domain.Money.of(orderOutput.totalAmount(), "USD"), "CREDIT_CARD");
         PayOrderOutput payOutput = paymentController.payOrder(payInput);
-        System.out.println("Payment Result: " + payOutput.success() + " (" + payOutput.message() + ")");
+        logger.info("Payment Result: " + payOutput.success() + " (" + payOutput.message() + ")");
         
         // Step 7: Track Shipment
-        System.out.println("\n[7] Tracking Shipment...");
+        logger.info("\n[7] Tracking Shipment...");
         // Wait a bit for async event processing (in real world). Here it's synchronous but good to check.
         java.util.Optional<com.ecommerce.shipping.api.dto.ShipmentDto> shipmentOpt = shippingService.trackShipment(orderOutput.orderId());
         shipmentOpt.ifPresentOrElse(
-            s -> System.out.println("Shipment Tracking: " + s.trackingCode() + " [" + s.status() + "] to " + s.address()),
-            () -> System.out.println("Shipment not found yet.")
+            s -> logger.info("Shipment Tracking: " + s.trackingCode() + " [" + s.status() + "] to " + s.address()),
+            () -> logger.info("Shipment not found yet.")
         );
         
-        System.out.println("\n--- Scenario Completed ---");
+        logger.info("\n--- Scenario Completed ---");
     }
 }

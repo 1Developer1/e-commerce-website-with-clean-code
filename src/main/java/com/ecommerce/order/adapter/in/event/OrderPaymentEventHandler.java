@@ -1,5 +1,8 @@
 package com.ecommerce.order.adapter.in.event;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ecommerce.order.entity.Order;
 import com.ecommerce.order.usecase.OrderRepository;
 import com.ecommerce.payment.usecase.event.PaymentSucceededEvent;
@@ -8,6 +11,7 @@ import com.ecommerce.shared.event.EventBus;
 import java.util.Optional;
 
 public class OrderPaymentEventHandler {
+    private static final Logger logger = LoggerFactory.getLogger(OrderPaymentEventHandler.class);
     private final OrderRepository orderRepository;
 
     public OrderPaymentEventHandler(OrderRepository orderRepository, EventBus eventBus) {
@@ -21,7 +25,7 @@ public class OrderPaymentEventHandler {
         orderOpt.ifPresent(order -> {
             order.pay();
             orderRepository.save(order);
-            System.out.println("[Event] Order " + order.getId() + " status updated to PAID.");
+            logger.info("[Event] Order " + order.getId() + " status updated to PAID.");
         });
     }
 }

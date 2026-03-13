@@ -1,5 +1,8 @@
 package com.ecommerce.shipping.usecase;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ecommerce.shipping.entity.Shipment;
 import com.ecommerce.shipping.usecase.port.ShippingRepository;
 import com.ecommerce.shipping.usecase.port.ShippingProvider;
@@ -7,6 +10,7 @@ import com.ecommerce.shipping.usecase.port.ShippingProvider;
 import java.util.UUID;
 
 public class CreateShipmentUseCase {
+    private static final Logger logger = LoggerFactory.getLogger(CreateShipmentUseCase.class);
     private final ShippingRepository repository;
     private final ShippingProvider shippingProvider;
 
@@ -18,7 +22,7 @@ public class CreateShipmentUseCase {
     public void execute(UUID orderId, String address) {
         // Idempotency check: Don't create if already exists
         if (repository.findByOrderId(orderId).isPresent()) {
-            System.out.println("[Shipping] Shipment already exists for order " + orderId);
+            logger.info("[Shipping] Shipment already exists for order " + orderId);
             return;
         }
 
@@ -29,6 +33,6 @@ public class CreateShipmentUseCase {
         shipment.assignTrackingCode(trackingCode);
         
         repository.save(shipment);
-        System.out.println("[Shipping] Shipment created: " + shipment.getId() + ", Tracking: " + shipment.getTrackingCode());
+        logger.info("[Shipping] Shipment created: " + shipment.getId() + ", Tracking: " + shipment.getTrackingCode());
     }
 }
