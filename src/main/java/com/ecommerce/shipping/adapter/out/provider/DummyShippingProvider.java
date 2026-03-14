@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ecommerce.shipping.usecase.port.ShippingProvider;
+import com.ecommerce.infrastructure.tracing.TraceContextPropagator;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -27,9 +28,11 @@ public class DummyShippingProvider implements ShippingProvider {
     private final TimeLimiter timeLimiter;
 
     private final String apiUrl;
+    private final TraceContextPropagator tracePropagator;
 
-    public DummyShippingProvider(String apiUrl) {
+    public DummyShippingProvider(String apiUrl, TraceContextPropagator tracePropagator) {
         this.apiUrl = apiUrl;
+        this.tracePropagator = tracePropagator;
         
         // Circuit Breaker: Açılması için %50 hata oranı veya yavaşlık
         CircuitBreakerConfig cbConfig = CircuitBreakerConfig.custom()
@@ -83,11 +86,17 @@ public class DummyShippingProvider implements ShippingProvider {
         logger.info("[DummyShippingProvider] Dış API çağrılıyor... (Adres: " + address + ") to " + apiUrl);
         try {
             java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
-            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+            java.net.http.HttpRequest.Builder requestBuilder = java.net.http.HttpRequest.newBuilder()
                     .uri(java.net.URI.create(apiUrl + "/api/shipment"))
                     .header("Content-Type", "application/json")
-                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString("{\"address\": \"" + address + "\"}"))
-                    .build();
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString("{\"address\": \"" + address + "\"}"));
+
+            // W3C Trace Context Propagation
+            String traceparent = tracePropagator.getTraceparentHeader();
+            if (!traceparent.isEmpty()) {
+                requestBuilder.header("traceparent", traceparent);
+            }
+            java.net.http.HttpRequest request = requestBuilder.build();
 
             java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() >= 500) {

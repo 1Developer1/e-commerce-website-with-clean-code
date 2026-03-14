@@ -1,197 +1,361 @@
-# Clean Architecture E-Commerce System 🛍️🚀
+# Clean Architecture E-Commerce System 🛍️
 
-A robust, production-ready E-Commerce backend built with Java 17, demonstrating strict adherence to **Robert C. Martin's Clean Architecture** principles, SOLID design, and **Site Reliability Engineering (SRE)** patterns.
+Java 17 ile geliştirilmiş, **Robert C. Martin'in Clean Architecture** prensiplerini, SOLID tasarımını, **SRE (Site Reliability Engineering)** kalıplarını ve **güvenlik/gözlemlenebilirlik** katmanlarını uygulayan üretim hazırlığına sahip bir E-Ticaret backend sistemi.
 
-## 🏛️ Architectural Philosophy
+---
 
-This project aims to completely isolate **Enterprise Business Rules (Entities)** and **Application Business Rules (Use Cases)** from external technical details (Databases, Web Frameworks, APIs).
+## 🏛️ Mimari Felsefe
 
-*   **The Dependency Rule:** Source code dependencies *only* point inward. Inner layers know absolutely nothing about outer layers.
-*   **Decoupled Modules:** `Product`, `Order`, `Cart`, `Discount`, and `Payment` are strictly encapsulated. They communicate via DTOs, Event-Driven Architecture (Pub/Sub EventBus), and Facade Services, rather than direct entity manipulation.
-*   **Deferred Decisions:** The system runs completely in-memory, deferring the choice of a specific database or web framework (like Spring Boot) until necessary.
+Projenin temel amacı, **Enterprise Business Rules (Entity)** ve **Application Business Rules (Use Case)** katmanlarını dış teknik detaylardan (Database, Web Framework, API) tamamen izole etmektir.
 
-### Conceptual Component Architecture
+- **Dependency Rule (Bağımlılık Kuralı):** Kaynak kodu bağımlılıkları *yalnızca içe doğru* akar. İç katmanlar dış katmanlar hakkında hiçbir şey bilmez.
+- **Screaming Architecture:** Klasör yapısı `Models/Views/Controllers` yerine iş alanlarını (Cart, Order, Payment...) haykırır.
+- **Deferred Decisions:** Veritabanı ve Web Framework seçimleri en sona ertelendi. Sistem ilk olarak tamamen In-Memory Repository'ler ile geliştirildi.
 
-```mermaid
-classDiagram
-    %% --- DOMAIN LAYER (Enterprise Business Rules) ---
-    namespace Domain {
-      class Product {
-        +UUID id
-        +String name
-        +Money price
-        +int stockQuantity
-        +create()
-        +decreaseStock()
-      }
-      class Order {
-        +UUID id
-        +List~OrderItem~ items
-        +calculateTotal()
-        +pay()
-      }
-      class Cart {
-        +UUID id
-        +addItem()
-        +getTotalPrice()
-      }
-      class User {
-        +UUID id
-        +String email
-      }
-      class Money {
-        +BigDecimal amount
-        +String currency
-      }
-    }
-    Product -- Money : contains
+### Katman Mimarisi
 
-    %% --- USE CASE LAYER (Application Business Rules) ---
-    namespace UseCase {
-      class CreateProductUseCase
-      class PlaceOrderUseCase
-      class AddToCartUseCase
-      class ListProductsUseCase
-      class ApplyDiscountUseCase
-      class PayOrderUseCase
-      
-      %% Input/Output Ports (Interfaces)
-      class ProductRepository { <<interface>> }
-      class OrderRepository { <<interface>> }
-      class CartRepository { <<interface>> }
-      class DiscountRepository { <<interface>> }
-      class DiscountProvider { <<interface>> }
-      class PaymentGateway { <<interface>> }
-      
-      %% Events
-      class PaymentSucceededEvent { <<event>> }
-    }
+```
+┌──────────────────────────────────────────────────────────┐
+│                  Frameworks & Drivers                     │
+│  Spring Boot · JPA · HttpClient · Resilience4j · JWT     │
+├──────────────────────────────────────────────────────────┤
+│                  Interface Adapters                       │
+│  Controllers · Presenters · JPA Adapters · Event Handlers│
+├──────────────────────────────────────────────────────────┤
+│                  Application Use Cases                    │
+│  CreateProduct · PlaceOrder · PayOrder · AddToCart · ...  │
+├──────────────────────────────────────────────────────────┤
+│                  Enterprise Entities                      │
+│  Product · Order · Cart · User · Money (Value Object)    │
+└──────────────────────────────────────────────────────────┘
+         ↑ Bağımlılıklar her zaman yukarıdan aşağıya akar
+```
 
-    CreateProductUseCase --> ProductRepository : uses
-    PlaceOrderUseCase --> OrderRepository : uses
-    PlaceOrderUseCase --> CartRepository : uses
-    AddToCartUseCase --> CartRepository : uses
-    AddToCartUseCase --> ProductRepository : uses
-    ApplyDiscountUseCase --> CartRepository : uses
-    ApplyDiscountUseCase --> DiscountProvider : uses
-    PayOrderUseCase --> PaymentGateway : uses
-    PayOrderUseCase ..> PaymentSucceededEvent : publishes
+---
 
-    %% --- INTERFACE ADAPTERS LAYER ---
-    namespace Adapters {
-      class ProductController
-      class OrderController
-      class CartController
-      class DiscountController
-      class PaymentController
-      class InMemoryProductRepository
-      class InMemoryOrderRepository
-      class InMemoryCartRepository
-      class InMemoryDiscountRepository
-      class CreditCardAdapter
-      class BankTransferAdapter
-      class OrderPaymentEventHandler
-    }
+## 📦 Modüler Yapı (Bounded Contexts)
 
-    %% RELATIONSHIPS
-    ProductController --> CreateProductUseCase : uses
-    OrderController --> PlaceOrderUseCase : uses
-    CartController --> AddToCartUseCase : uses
-    DiscountController --> ApplyDiscountUseCase : uses
-    PaymentController --> PayOrderUseCase : uses
-    OrderPaymentEventHandler ..> PaymentSucceededEvent : subscribes
-    OrderPaymentEventHandler --> OrderRepository : uses
+```
+com.ecommerce/
+├── cart/           # Sepet yönetimi (Entity, UseCase, Adapter, API, Facade)
+├── discount/       # İndirim kupon sistemi
+├── order/          # Sipariş oluşturma ve durum yönetimi
+├── payment/        # Ödeme işleme (Strategy Pattern: Kredi Kartı / Havale)
+├── product/        # Ürün kataloğu (CRUD)
+├── shipping/       # Kargo takip ve gönderim (External API entegrasyonu)
+├── user/           # Kullanıcı bilgileri
+├── shared/         # Ortak bileşenler (Money Value Object, EventBus, DomainEvent)
+└── infrastructure/ # Glue Code (Spring Config, Security, Tracing, Web)
+```
 
-    InMemoryProductRepository ..|> ProductRepository : implements
-    InMemoryOrderRepository ..|> OrderRepository : implements
-    InMemoryCartRepository ..|> CartRepository : implements
-    InMemoryDiscountRepository ..|> DiscountRepository : implements
-    CreditCardAdapter ..|> PaymentGateway : implements
-    BankTransferAdapter ..|> PaymentGateway : implements
+Her modül kendi içinde aşağıdaki Clean Architecture katmanlarına ayrılmıştır:
+
+```
+module/
+├── entity/                     # Domain Entity (Saf Java, 0 framework bağımlılığı)
+├── usecase/                    # Use Case + Input/Output + Port Interfaces
+├── adapter/
+│   ├── in/controller/          # Inbound Adapter (REST Controller)
+│   ├── in/presenter/           # Presenter (UseCase Output → ViewModel)
+│   ├── in/event/               # Event Handler (Inbound Event Subscriber)
+│   └── out/persistence/        # Outbound Adapter (Repository Implementation)
+├── api/                        # Public Module API (Facade Interface)
+└── internal/                   # Facade Implementation (Encapsulated)
+```
+
+---
+
+## 🔌 API Endpoint'leri
+
+### Kimlik Doğrulama
+| Metot | Endpoint | Açıklama | Yetki |
+|-------|----------|----------|-------|
+| `POST` | `/auth/login` | JWT token üretir | 🔓 Public |
+
+### Ürünler
+| Metot | Endpoint | Açıklama | Yetki |
+|-------|----------|----------|-------|
+| `POST` | `/products` | Yeni ürün oluşturur | 🔒 JWT |
+| `GET` | `/products` | Tüm ürünleri listeler | 🔒 JWT |
+
+### Sepet
+| Metot | Endpoint | Açıklama | Yetki |
+|-------|----------|----------|-------|
+| `POST` | `/cart` | Sepete ürün ekler | 🔒 JWT |
+| `POST` | `/cart/discount` | İndirim kuponu uygular | 🔒 JWT |
+
+### Siparişler
+| Metot | Endpoint | Açıklama | Yetki |
+|-------|----------|----------|-------|
+| `POST` | `/orders` | Sepetten sipariş oluşturur | 🔒 JWT |
+
+### Ödeme
+| Metot | Endpoint | Açıklama | Yetki |
+|-------|----------|----------|-------|
+| `POST` | `/payments` | Siparişi öder (Strategy: CREDIT_CARD / BANK_TRANSFER) | 🔒 JWT |
+
+### Operasyonel (Actuator)
+| Metot | Endpoint | Açıklama | Yetki |
+|-------|----------|----------|-------|
+| `GET` | `/actuator/health/liveness` | Liveness probe (K8s) | 🔓 Public |
+| `GET` | `/actuator/health/readiness` | Readiness probe (K8s) | 🔓 Public |
+| `GET` | `/actuator/prometheus` | Prometheus metrics scraping | 🔓 Public |
+
+> **Not:** `userId` artık request body'den alınmıyor. JWT token'dan `@AuthenticationPrincipal` ile otomatik olarak çıkarılıyor.
+
+---
+
+## 🔒 Güvenlik (Authentication & Authorization)
+
+```
+Client Request → JwtAuthenticationFilter → SecurityFilterChain → Controller
+                      │
+                      ├── Authorization header'dan Bearer token çıkarır
+                      ├── JwtUtil ile token'ı doğrular (HMAC256)
+                      ├── userId'yi SecurityContext'e yerleştirir
+                      └── Geçersizse → 401 Unauthorized
+```
+
+| Bileşen | Dosya | Sorumluluk |
+|---------|-------|-----------|
+| `JwtUtil` | `infrastructure/security/` | Token üretme ve doğrulama |
+| `JwtAuthenticationFilter` | `infrastructure/security/` | HTTP request filtresi |
+| `SecurityConfig` | `infrastructure/security/` | Endpoint koruma kuralları |
+| `AuthController` | `infrastructure/web/` | `/auth/login` mock endpoint |
+
+**Korunan endpoint'ler:** `/products/**`, `/cart/**`, `/orders/**`, `/payments/**`
+**Açık endpoint'ler:** `/auth/**`, `/actuator/**`, `/h2-console/**`
+
+---
+
+## 📊 Gözlemlenebilirlik (Observability)
+
+### Metrikler (Micrometer + Prometheus)
+- Spring Boot Actuator üzerinden `/actuator/prometheus` endpoint'i
+- JVM metrikleri, HTTP istek sayıları, veritabanı bağlantı havuzu durumu
+- Grafana dashboard'ları ile görselleştirmeye hazır
+
+### Dağıtık İzleme (OpenTelemetry)
+- Micrometer Tracing + OpenTelemetry bridge
+- Logback JSON loglarına `traceId` ve `spanId` otomatik eklenir
+- **W3C Trace Context Propagation:** `CreditCardAdapter` ve `DummyShippingProvider` dış HTTP çağrılarına `traceparent` header'ı otomatik enjekte eder
+
+```
+[İstemci] → [API Gateway] → [PlaceOrderUseCase] → [CreditCardAdapter] → [Dış Ödeme API'si]
+   │              │                  │                      │
+   traceId────────┼──────────────────┼──────────────────────┘
+                  │                  │           traceparent header
+```
+
+### JSON Loglama (Logstash Encoder)
+```json
+{
+  "timestamp": "2026-03-14T21:00:00.000Z",
+  "level": "INFO",
+  "logger": "c.e.payment.adapter.CreditCardAdapter",
+  "message": "Dış Ödeme API'si çağrılıyor...",
+  "traceId": "abc123def456",
+  "spanId": "789xyz"
+}
 ```
 
 ---
 
 ## 🛡️ SRE & Production Readiness
 
-The platform goes beyond architecture to guarantee extreme stability and fault-tolerance in chaotic production environments. We applied foundational SRE architecture layers to complement Clean Architecture:
+### Resilience4j Zırhları (Outbound Adapters)
 
-### 1. Foundation (Infrastructure & Environment)
-*The bare metal or containerized environment and base technical capabilities.*
-*   **Web Server & Database:** Built on embedded **Apache Tomcat** via Spring Boot, with **H2 Database (In-Memory) / Spring Data JPA** handling persistence seamlessly at the Infrastructure layer.
-*   **Container Security & Sizing:** Included a **Multi-Stage Dockerfile** relying on `eclipse-temurin:17-jre-alpine`. It restricts file permissions, strips tooling, and runs exclusively as `ecommerceuser` (non-root).
-*   **12-Factor App Config:** Application port, DB connection, and pool configurations are externalized through `.env` (`dotenv-java`) mapped to `application.yml`, completely removing hard-coded properties.
-*   **Physical Bulkheads (Kubernetes):** Enforced `limits` and `requests` mapping to prevent unbounded CPU (`500m`) and Memory (`512Mi`) spikes across cluster nodes in `k8s/deployment.yaml`.
+Her dış API çağrısı (`CreditCardAdapter`, `DummyShippingProvider`) 4 katmanlı koruma ile sarılıdır:
 
-### 2. Interconnect (Integration Points)
-*The communication lines handling external APIs, databases, and message buses where cascading failures typically originate.*
-*   All outbound network boundaries (Adapters mapping to APIs like Bank and Cargo) are guarded using **Resilience4j Armor**:
-    *   **Timeouts (`TimeLimiter`):** Prevents blocking threads against slow third-party responses.
-    *   **Circuit Breakers:** Detects consecutive failures and halts outgoing traffic instantly.
-    *   **Logical Bulkheads:** Limits concurrent traffic executing on external Adapters protecting our native Thread Pools.
-    *   **Retries:** Exponential backoffs implemented for intermittent network errors.
+```
+Request → TimeLimiter (3s) → Retry (3 deneme) → Bulkhead (max 10 eşzamanlı) → CircuitBreaker (50% eşik) → Fallback
+```
 
-### 3. Control Plane (Governance & Health)
-*The management layer that observes and steers the instances.*
-*   **Spring Boot Actuator:** Exposes production-ready features such as `/actuator/health`, `/actuator/metrics`, and `/actuator/info` to monitor the application context, database health, and system readiness.
-*   **Disposability & Graceful Shutdown**: JVM handles `SIGTERM` gracefully via Spring Boot lifecycle hooks, granting a grace period for inflight requests to wrap up before shutting down the Tomcat context.
+| Kalıp | Konfigürasyon | Amacı |
+|-------|--------------|-------|
+| **TimeLimiter** | 3 saniye timeout | Yavaş API'lerden korunma |
+| **Retry** | 3 deneme, 500ms backoff | Geçici hataları tolere etme |
+| **Bulkhead** | Maks 10 eşzamanlı çağrı | Thread havuzunu koruma |
+| **CircuitBreaker** | %50 hata eşiği, 15s açık kalma | Çökmüş servislere istek göndermeme |
 
-### 4. Instances (Application Workloads)
-*The scaled replicas executing the core domain rules and HTTP endpoints.*
-*   **HTTP Controllers:** Standard Spring `@RestController` implementations exposed on standard ports, mapping directly to independent Use Case facades.
-*   **Clean Architecture Rules**: The `com.ecommerce.domain` and `usecase` layers remain purely synchronous, testable, and completely detached from Spring Boot, JPA, or network protocols.
-*   **Stateless Replication**: Kubernetes `deployment.yaml` specifies horizontal scaling, and seamless self-healing since the application instances maintain no local state.
+### Konteyner & Kubernetes
+
+```dockerfile
+# Multi-stage build, Non-root, Alpine-based
+FROM eclipse-temurin:17-jdk-alpine AS builder
+FROM eclipse-temurin:17-jre-alpine AS runtime
+RUN adduser -D ecommerceuser
+USER ecommerceuser
+```
+
+```yaml
+# k8s/deployment.yaml
+resources:
+  limits: { cpu: "500m", memory: "512Mi" }
+  requests: { cpu: "250m", memory: "256Mi" }
+livenessProbe: /actuator/health/liveness
+readinessProbe: /actuator/health/readiness
+```
 
 ---
 
-## 🛠️ Architecture Enforcement Checks
+## 🧩 Tasarım Kalıpları (Design Patterns)
 
-The application is heavily guarded against "architectural drift" using unit tests, byte-code analysis, and static metrics:
+| Kalıp | Kullanım Yeri |
+|-------|--------------|
+| **Strategy** | `PaymentGateway` → CreditCard / BankTransfer seçimi |
+| **Facade** | `CartService` / `ShippingService` → modül içi detayları gizler |
+| **Repository** | `OrderRepository`, `CartRepository`, `ProductRepository` |
+| **Mapper** | `OrderPersistenceAdapter` → Domain ↔ JPA Entity dönüşümü |
+| **DTO** | `CartDto`, `ShipmentDto` → katmanlar arası veri taşıma |
+| **Domain Events** | `PaymentSucceededEvent` → `OrderPaidEventHandler` / `ShippingHandler` |
+| **Factory Method** | `Order.create()`, `Product.create()`, `Cart.create()` |
+| **Value Object** | `Money` → immutable, equals/hashCode override |
+| **Decorator** | Resilience4j Circuit → Retry → Bulkhead → TimeLimiter zinciri |
+| **Presenter** | `ProductPresenter`, `OrderPresenter` → UseCase Output → ViewModel |
+| **Filter Chain** | `JwtAuthenticationFilter` → Spring Security |
 
-*   **ArchUnit**: Detects cycle dependencies between modules and ensures inner rings never import frameworks or adapter packages.
-*   **PMD & Checkstyle**: Analyzes complex NPath values, Cyclomatic complexities, and ensures strict Google Java Formatting styles.
-*   **Fitness Functions**: Tests generic scenario lifecycles (order creation timeframes) to prove SLA thresholds.
+---
 
-### Running Enforcement Metrics
+## 🛠️ Mimari Kalite Koruması
+
+Projenin "architectural drift" (mimari kayma) riskine karşı otomatik korumaları vardır:
+
+| Araç | Ne Yapar? |
+|------|----------|
+| **ArchUnit** | Döngüsel bağımlılıkları, katman ihlallerini ve isimlendirme kurallarını birim testi olarak doğrular |
+| **PMD 7** | Statik kod analizi (karmaşıklık, hata kalıpları, best practices) — Özel `pmd-ruleset.xml` ile yapılandırılmış |
+| **Checkstyle** | Kod stili tutarlılığını denetler (Google Java Style) |
+| **Fitness Functions** | SLA eşik testleri (sipariş oluşturma süresi vb.) |
 
 ```bash
-# Evaluate CheckStyle & PMD Rules
-mvn clean checkstyle:check pmd:check
+# Tüm kalite kontrollerini çalıştır
+mvn clean checkstyle:check pmd:check test
 
-# Generate JDepend Architecture Dependency Metrics Table in targets
+# JDepend bağımlılık metrikleri
 mvn jdepend:generate
 ```
 
 ---
 
-## 📦 Quickstart
+## 📚 Mimari Karar Kayıtları (ADR)
 
-### Without Docker (Maven CLI)
+Proje boyunca alınan her önemli mimari karar belgelenmiştir:
 
-1. Make sure Java 17+ and Maven 3.8+ are installed.
-2. Clone this repo.
-3. Establish Environment Configuration file:
-    ```bash
-    cp .env.example .env
-    # Modify port allocations if needed
-    ```
-4. Build and run:
-    ```bash
-    mvn clean package
-    mvn exec:java
-    ```
+| # | Karar | Konum |
+|---|-------|-------|
+| 001 | Clean Architecture benimsenmesi | `docs/adr/` |
+| 002 | Modüler monolit yapısı | `docs/adr/` |
+| 003 | Altyapı kararlarının ertelenmesi | `docs/adr/` |
+| 004 | Mimari uygulama stratejisi | `docs/adr/` |
+| 005 | Product ve Cart refactoring | `docs/adr/` |
+| 006 | Discount modülü eklenmesi | `docs/adr/` |
+| 007 | Payment Strategy Pattern | `docs/adr/` |
+| 008 | DTO Pattern kullanımı | `docs/adr/` |
+| 009 | Domain Events ayrıştırma | `docs/adr/` |
+| 010 | Module Facade Pattern | `docs/adr/` |
+| 011 | Strict Module Encapsulation | `docs/adr/` |
+| 012 | Shipping modül tasarımı | `docs/adr/` |
+| 013 | Strict Module Encapsulation v2 | `docs/adr/` |
+| 014 | SRE Deployment & Logging | `docs/architecture/decisions/` |
+| 015 | Spring Boot & JPA Integration | `docs/architecture/decisions/` |
+| 016 | Trace Propagation & Presenter | `docs/architecture/decisions/` |
 
-### With Docker / Kubernetes
+---
+
+## 🚀 Quickstart
+
+### Gereksinimler
+- Java 17+
+- Maven 3.8+
+
+### Yerel Çalıştırma (Maven)
 
 ```bash
-# Build the Alpine image
+# 1. Repoyu klonla
+git clone <repo-url> && cd e-commerce-app
+
+# 2. Ortam değişkenlerini ayarla
+cp .env.example .env
+
+# 3. Derle ve çalıştır
+mvn clean package -DskipTests
+mvn spring-boot:run
+```
+
+### Docker ile Çalıştırma
+
+```bash
+# Alpine imajını oluştur
 docker build -t ecommerce-app:latest .
 
-# Run locally in Docker mapping standard 8080 port
+# Çalıştır
 docker run -p 8080:8080 --env-file .env ecommerce-app:latest
+```
 
-# Or apply straight to a local minikube/kind Kubernetes cluster
+### Kubernetes'e Deploy
+
+```bash
 kubectl apply -f k8s/deployment.yaml
 ```
 
-The server automatically starts standard operational scenarios resolving domain-level cart handling, promotions, asynchronous events processing, payment fallbacks logging, and shipment tracking sequentially. Check Terminal output to view structured JSON interactions.
+### Token Alma ve API Kullanımı
+
+```bash
+# 1. JWT token al
+TOKEN=$(curl -s -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin"}' | jq -r '.token')
+
+# 2. Ürün oluştur
+curl -X POST http://localhost:8080/products \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"MacBook Pro","description":"Laptop","price":1999.99,"currency":"USD","stockQuantity":10}'
+
+# 3. Ürünleri listele
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/products
+```
+
+---
+
+## 🧪 Test Suite
+
+```bash
+# Tüm testleri çalıştır
+mvn clean test
+
+# Sadece Architecture testleri
+mvn test -Dtest=ArchitectureTest
+
+# Sadece Fitness testleri
+mvn test -Dtest=FitnessTest
+
+# Resilience4j Chaos testleri (WireMock ile)
+mvn test -Dtest=CreditCardAdapterTest
+```
+
+| Test Kategorisi | Dosya | Ne Test Eder? |
+|----------------|-------|--------------|
+| **Unit Tests** | `*UseCaseTest.java` | İş mantığı (mock repository ile) |
+| **Architecture** | `ArchitectureTest.java` | Katman ihlalleri, döngüsel bağımlılıklar |
+| **Fitness** | `FitnessTest.java` | Performans SLA eşikleri |
+| **Chaos** | `CreditCardAdapterTest.java` | CircuitBreaker, TimeLimiter, Retry |
+
+---
+
+## 📁 Teknoloji Stack
+
+| Katman | Teknoloji |
+|--------|----------|
+| **Language** | Java 17 |
+| **Build** | Maven |
+| **Web Framework** | Spring Boot 3.x |
+| **Persistence** | Spring Data JPA + H2 (In-Memory) / PostgreSQL |
+| **Security** | Spring Security + JWT (java-jwt) |
+| **Resilience** | Resilience4j (CircuitBreaker, Retry, Bulkhead, TimeLimiter) |
+| **Observability** | Micrometer + Prometheus + OpenTelemetry |
+| **Logging** | SLF4J + Logback + Logstash JSON Encoder |
+| **Testing** | JUnit 5 + Mockito + ArchUnit + WireMock |
+| **Code Quality** | PMD 7 + Checkstyle + JDepend |
+| **Containerization** | Docker (Multi-stage Alpine) + Kubernetes |

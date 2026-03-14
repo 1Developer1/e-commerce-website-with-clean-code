@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<ruleset name="Custom Rules"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 http://pmd.sourceforge.net/ruleset_2_0_0.xsd">
+
+    <description>Custom PMD ruleset for Clean Architecture E-Commerce App</description>
+
+    <!-- Include standard categories -->
+    <rule ref="category/java/bestpractices.xml">
+        <!-- Guarding logs can be tedious and not strictly necessary for simple info logs -->
+        <exclude name="GuardLogStatement"/>
+        <!-- PMD 7 false positives on private mapping methods -->
+        <exclude name="UnusedPrivateMethod"/>
+    </rule>
+    
+    <rule ref="category/java/design.xml">
+        <!-- LawOfDemeter causes too many false positives with Java Records and DTOs -->
+        <exclude name="LawOfDemeter"/>
+        <!-- Spring Config methods (like SecurityFilterChain) must throw Exception -->
+        <exclude name="SignatureDeclareThrowsException"/>
+        <!-- Clean Arch use cases might import many domain/adapter classes -->
+        <exclude name="ExcessiveImports"/>
+        <!-- TooManyMethods triggers on our centralized UseCaseConfig -->
+        <exclude name="TooManyMethods"/>
+        <!-- Coupling is naturally high in Bootstrappers and main configs -->
+        <exclude name="CouplingBetweenObjects"/>
+        <exclude name="LoosePackageCoupling"/>
+        <!-- DataClass flags normal Domain/JPA entities inappropriately -->
+        <exclude name="DataClass"/>
+        <!-- UseUtilityClass flags Spring Configuration modules improperly -->
+        <exclude name="UseUtilityClass"/>
+        <!-- AvoidCatchingGenericException flags outer boundary catch-all blocks -->
+        <exclude name="AvoidCatchingGenericException"/>
+    </rule>
+    
+    <rule ref="category/java/errorprone.xml">
+        <!-- AvoidDuplicateLiterals is too noisy with common string values like beans or keys -->
+        <exclude name="AvoidDuplicateLiterals"/>
+        <!-- We use try-catch blocks where we need simple generic fallback logic -->
+        <exclude name="EmptyCatchBlock"/>
+    </rule>
+
+</ruleset>

@@ -44,6 +44,7 @@ import com.ecommerce.shipping.api.ShippingService;
 import com.ecommerce.shipping.internal.ShippingModule;
 import com.ecommerce.shared.event.EventBus;
 import com.ecommerce.shared.event.SimpleEventBus;
+import com.ecommerce.infrastructure.tracing.TraceContextPropagator;
 
 import com.ecommerce.product.adapter.in.controller.ProductController;
 import com.ecommerce.cart.adapter.in.controller.CartController;
@@ -127,10 +128,10 @@ public class UseCaseConfig {
     }
 
     @Bean
-    public Map<String, PaymentGateway> paymentStrategies() {
+    public Map<String, PaymentGateway> paymentStrategies(TraceContextPropagator tracePropagator) {
         String paymentApiUrl = System.getenv("PAYMENT_API_URL") != null ? System.getenv("PAYMENT_API_URL") : "http://localhost:8081";
         Map<String, PaymentGateway> strategies = new HashMap<>();
-        strategies.put("CREDIT_CARD", new CreditCardAdapter(paymentApiUrl));
+        strategies.put("CREDIT_CARD", new CreditCardAdapter(paymentApiUrl, tracePropagator));
         strategies.put("BANK_TRANSFER", new BankTransferAdapter());
         return strategies;
     }
@@ -141,9 +142,9 @@ public class UseCaseConfig {
     }
 
     @Bean
-    public ShippingProvider shippingProvider() {
+    public ShippingProvider shippingProvider(TraceContextPropagator tracePropagator) {
         String shippingApiUrl = System.getenv("SHIPPING_API_URL") != null ? System.getenv("SHIPPING_API_URL") : "http://localhost:8081";
-        return new DummyShippingProvider(shippingApiUrl);
+        return new DummyShippingProvider(shippingApiUrl, tracePropagator);
     }
 
     @Bean
@@ -165,6 +166,17 @@ public class UseCaseConfig {
     @Bean
     public OrderPaidEventHandler orderPaidEventHandler(ShippingService shippingService, EventBus eventBus) {
         return new OrderPaidEventHandler(shippingService, eventBus);
+    }
+
+    // --- PRESENTERS (Interface Adapters) ---
+    @Bean
+    public com.ecommerce.product.adapter.in.presenter.ProductPresenter productPresenter() {
+        return new com.ecommerce.product.adapter.in.presenter.ProductPresenter();
+    }
+
+    @Bean
+    public com.ecommerce.order.adapter.in.presenter.OrderPresenter orderPresenter() {
+        return new com.ecommerce.order.adapter.in.presenter.OrderPresenter();
     }
 
     // Controllers are now decorated with @RestController and auto-discovered by Spring Boot.

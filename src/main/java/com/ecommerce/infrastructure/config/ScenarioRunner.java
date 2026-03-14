@@ -5,23 +5,21 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import com.ecommerce.product.adapter.in.controller.ProductController;
-import com.ecommerce.cart.adapter.in.controller.CartController;
-import com.ecommerce.order.adapter.in.controller.OrderController;
-import com.ecommerce.payment.adapter.in.controller.PaymentController;
-import com.ecommerce.shipping.api.ShippingService;
-
 import com.ecommerce.product.usecase.CreateProductInput;
 import com.ecommerce.product.usecase.CreateProductOutput;
+import com.ecommerce.product.usecase.CreateProductUseCase;
 import com.ecommerce.product.usecase.ListProductsOutput;
-import com.ecommerce.cart.usecase.AddToCartInput;
+import com.ecommerce.product.usecase.ListProductsUseCase;
+import com.ecommerce.cart.adapter.in.controller.CartController;
 import com.ecommerce.cart.usecase.AddToCartOutput;
-import com.ecommerce.cart.usecase.ApplyDiscountInput;
 import com.ecommerce.cart.usecase.ApplyDiscountOutput;
 import com.ecommerce.order.usecase.PlaceOrderInput;
 import com.ecommerce.order.usecase.PlaceOrderOutput;
+import com.ecommerce.order.usecase.PlaceOrderUseCase;
+import com.ecommerce.payment.adapter.in.controller.PaymentController;
 import com.ecommerce.payment.usecase.PayOrderInput;
 import com.ecommerce.payment.usecase.PayOrderOutput;
+import com.ecommerce.shipping.api.ShippingService;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -31,18 +29,20 @@ public class ScenarioRunner implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(ScenarioRunner.class);
 
-    private final ProductController productController;
+    private final CreateProductUseCase createProductUseCase;
+    private final ListProductsUseCase listProductsUseCase;
     private final CartController cartController;
-    private final OrderController orderController;
+    private final PlaceOrderUseCase placeOrderUseCase;
     private final PaymentController paymentController;
     private final ShippingService shippingService;
 
-    public ScenarioRunner(ProductController productController, CartController cartController, 
-                          OrderController orderController, PaymentController paymentController, 
-                          ShippingService shippingService) {
-        this.productController = productController;
+    public ScenarioRunner(CreateProductUseCase createProductUseCase, ListProductsUseCase listProductsUseCase,
+                          CartController cartController, PlaceOrderUseCase placeOrderUseCase,
+                          PaymentController paymentController, ShippingService shippingService) {
+        this.createProductUseCase = createProductUseCase;
+        this.listProductsUseCase = listProductsUseCase;
         this.cartController = cartController;
-        this.orderController = orderController;
+        this.placeOrderUseCase = placeOrderUseCase;
         this.paymentController = paymentController;
         this.shippingService = shippingService;
     }
@@ -51,17 +51,17 @@ public class ScenarioRunner implements CommandLineRunner {
     public void run(String... args) throws Exception {
         logger.info("--- E-Commerce System Started (Spring Boot) ---");
 
-        // Step 1: Create Product
+        // Step 1: Create Product (Use Case directly to get typed output)
         logger.info("\n[1] Creating Product...");
         CreateProductInput productInput = new CreateProductInput(
             "MacBook Pro", "High-end laptop", new BigDecimal("1999.99"), "USD", 10
         );
-        CreateProductOutput productOutput = productController.createProduct(productInput);
+        CreateProductOutput productOutput = createProductUseCase.execute(productInput);
         logger.info("Product Created: " + productOutput.name() + " (ID: " + productOutput.id() + ")");
 
         // Step 2: List Products
         logger.info("\n[2] Listing Products...");
-        ListProductsOutput listOutput = productController.listProducts();
+        ListProductsOutput listOutput = listProductsUseCase.execute();
         listOutput.products().forEach(p -> 
             logger.info(" - " + p.name() + ": " + p.price() + " " + p.currency())
         );
@@ -69,21 +69,20 @@ public class ScenarioRunner implements CommandLineRunner {
         // Step 3: Add to Cart
         logger.info("\n[3] Adding to Cart...");
         UUID userId = UUID.randomUUID();
-        AddToCartInput cartInput = new AddToCartInput(userId, productOutput.id(), 1);
-        AddToCartOutput cartOutput = cartController.addToCart(cartInput);
+        CartController.AddToCartRequest cartRequest = new CartController.AddToCartRequest(productOutput.id(), 1);
+        AddToCartOutput cartOutput = cartController.addToCart(userId, cartRequest);
         logger.info("Cart: " + cartOutput.itemsCount() + " items, Total: " + cartOutput.totalAmount() + " " + cartOutput.currency());
 
         // Step 4: Apply Discount
         logger.info("\n[4] Applying Discount...");
-        ApplyDiscountInput discountInput = new ApplyDiscountInput(userId, "SUMMER10");
-        ApplyDiscountOutput discountOutput = cartController.applyDiscount(discountInput);
+        CartController.ApplyDiscountRequest discountRequest = new CartController.ApplyDiscountRequest("SUMMER10");
+        ApplyDiscountOutput discountOutput = cartController.applyDiscount(userId, discountRequest);
         logger.info("Discount Applied: " + discountOutput.success() + " (" + discountOutput.message() + ")");
         logger.info("New Cart Total: " + discountOutput.newTotal());
 
-        // Step 5: Place Order
+        // Step 5: Place Order (Use Case directly to get typed output for payment)
         logger.info("\n[5] Placing Order...");
-        PlaceOrderInput orderInput = new PlaceOrderInput(userId);
-        PlaceOrderOutput orderOutput = orderController.placeOrder(orderInput);
+        PlaceOrderOutput orderOutput = placeOrderUseCase.execute(new PlaceOrderInput(userId));
         logger.info("Order Placed: ID=" + orderOutput.orderId() + ", Status=" + orderOutput.status() + ", Total=" + orderOutput.totalAmount());
         
         // Step 6: Pay Order

@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ecommerce.payment.usecase.port.PaymentGateway;
 import com.ecommerce.shared.domain.Money;
+import com.ecommerce.infrastructure.tracing.TraceContextPropagator;
 import io.github.resilience4j.bulkhead.Bulkhead;
 import io.github.resilience4j.bulkhead.BulkheadConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -27,9 +28,11 @@ public class CreditCardAdapter implements PaymentGateway {
     private final TimeLimiter timeLimiter;
 
     private final String apiUrl;
+    private final TraceContextPropagator tracePropagator;
 
-    public CreditCardAdapter(String apiUrl) {
+    public CreditCardAdapter(String apiUrl, TraceContextPropagator tracePropagator) {
         this.apiUrl = apiUrl;
+        this.tracePropagator = tracePropagator;
 
         CircuitBreakerConfig cbConfig = CircuitBreakerConfig.custom()
             .failureRateThreshold(50)
@@ -77,11 +80,17 @@ public class CreditCardAdapter implements PaymentGateway {
         logger.info("[CreditCardAdapter] Dış Ödeme API'si çağrılıyor... (" + amount + ") to " + apiUrl);
         try {
             java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
-            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+            java.net.http.HttpRequest.Builder requestBuilder = java.net.http.HttpRequest.newBuilder()
                     .uri(java.net.URI.create(apiUrl + "/api/charge"))
                     .header("Content-Type", "application/json")
-                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString("{\"amount\": " + amount.getAmount() + "}"))
-                    .build();
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString("{\"amount\": " + amount.getAmount() + "}"));
+
+            // W3C Trace Context Propagation
+            String traceparent = tracePropagator.getTraceparentHeader();
+            if (!traceparent.isEmpty()) {
+                requestBuilder.header("traceparent", traceparent);
+            }
+            java.net.http.HttpRequest request = requestBuilder.build();
 
             java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() >= 500) {
@@ -89,7 +98,7 @@ public class CreditCardAdapter implements PaymentGateway {
             }
             return true; 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("[CreditCardAdapter] Network/IO Error: {} - {}", e.getClass().getName(), e.getMessage(), e);
             throw new RuntimeException("Network/IO Error: " + e.getClass().getName() + " - " + e.getMessage(), e);
         }
     }

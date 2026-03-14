@@ -1,6 +1,7 @@
 package com.ecommerce.payment.adapter.out.strategy;
 
 import com.ecommerce.shared.domain.Money;
+import com.ecommerce.infrastructure.tracing.TraceContextPropagator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -9,21 +10,26 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class CreditCardAdapterTest {
 
     private CreditCardAdapter adapter;
     private Money testAmount;
+    private TraceContextPropagator tracePropagator;
 
     @BeforeEach
     void setUp() {
-        adapter = new CreditCardAdapter("http://localhost:8081");
+        tracePropagator = mock(TraceContextPropagator.class);
+        when(tracePropagator.getTraceparentHeader()).thenReturn("");
+        adapter = new CreditCardAdapter("http://localhost:8081", tracePropagator);
         testAmount = Money.of(new BigDecimal("100.00"), "USD");
     }
 
     @Test
     void testSuccessfulPayment() {
-        CreditCardAdapter fastAdapter = new CreditCardAdapter("http://localhost:8081") {
+        CreditCardAdapter fastAdapter = new CreditCardAdapter("http://localhost:8081", tracePropagator) {
             @Override
             protected boolean simulateExternalPayment(Money amount) {
                 return true;
@@ -40,7 +46,7 @@ class CreditCardAdapterTest {
         // HOWEVER, because we also have a Retry(maxAttempts=3) configured AROUND the TimeLimiter,
         // it will retry the TimeoutException 3 times before finally giving up.
         // Total expected time: 3s + 500ms + 3s + 500ms + 3s = ~10 seconds.
-        CreditCardAdapter slowAdapter = new CreditCardAdapter("http://localhost:8081") {
+        CreditCardAdapter slowAdapter = new CreditCardAdapter("http://localhost:8081", tracePropagator) {
             @Override
             protected boolean simulateExternalPayment(Money amount) {
                 try {
@@ -63,7 +69,7 @@ class CreditCardAdapterTest {
     @Test
     void testCircuitBreakerOpensAfterFailures() {
         // Test CircuitBreaker by forcing failures to cross the 50% rate threshold.
-        CreditCardAdapter failingAdapter = new CreditCardAdapter("http://localhost:8081") {
+        CreditCardAdapter failingAdapter = new CreditCardAdapter("http://localhost:8081", tracePropagator) {
             @Override
             protected boolean simulateExternalPayment(Money amount) {
                  // Always fail this mock so Retry exhausts itself cleanly and Circuit receives failures.
