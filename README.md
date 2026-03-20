@@ -132,17 +132,24 @@ Client Request → JwtAuthenticationFilter → SecurityFilterChain → Controlle
 
 SRE'nin "Four Golden Signals" (Dört Altın Sinyal) yaklaşımına göre sistem sağlığı izlenir:
 
-### İzlenen Metrikler ve Nedenleri
+### İzlenen Metrikler ve SRE Anlamları
 
-| Metrik | Neden İzlenir? | Endpoint / Kaynak |
+SRE kültüründe bir sistemi "Kör Uçuş (Blind Flight)" hatasından kurtarmak için metrikler hayati öneme sahiptir. İzlediğimiz temel metriklerin amaçları şunlardır:
+
+1.  **Latency (Gecikme süresi):** Kullanıcının bir isteğe ne kadar sürede yanıt aldığını gösterir. Ortalama gecikme (Mean) yanıltıcı olabilir, bu nedenle p95 ve p99 (yüzdelik dilimler) izlenir. Sistemin en kötü durum performansını belirlemek ve SLA (Hizmet Seviyesi Anlaşması) ihlallerini tespit etmek için kritiktir.
+2.  **Traffic (Trafik / İstek Sayısı):** Sistemin saniyede karşıladığı HTTP isteği veya mesaj sayısıdır. Sistemin kapasite sınırlarını zorlayıp zorlamadığını (örneğin Black Friday trafiği) gösterir. Anormal artışlar DDoS saldırısına işaret edebilir.
+3.  **Error Rate (Hata Oranı):** Başarısız olan isteklerin (HTTP 5xx) toplam isteklere oranıdır. Bu oranın sıfır olması beklenmez (Hata Bütçesi/Error Budget konsepti). Ancak bu oran aniden yükselirse bir kod hatası (bug) veya bağımlı bir sistemin çökmesi söz konusudur ve derhal müdahale gerektirir.
+4.  **Saturation (Doygunluk):** Sistem kaynaklarının (CPU, Memory, Disk G/Ç, Veritabanı Connection Pool kapasitesi) ne kadarının "dolu" olduğunu gösterir. Doygunluk %100'e yaklaşırken performans genellikle aniden düşer (Cliff effect). Bu metrikler felaket baş göstermeden *önceden* donanım artırımına (Scaling) karar vermek için izlenir.
+
+| Metrik | Neden İzlenir? / Neyi İşaret Eder? | Tipik Kaynak (Endpoint) |
 |--------|---------------|-------------------|
-| **Latency (Gecikme)** | P99 latency artarsa kullanıcı deneyimi bozulur. SLA ihlali tespit edilir | `http.server.requests` |
-| **Traffic (Trafik)** | Anlık istek sayısı izlenerek kapasite planlaması yapılır. Ani spike'lar DDoS saldırısı olabilir | `http.server.requests.count` |
-| **Error Rate (Hata Oranı)** | 5xx oranı arttığında sistem sağlığı bozulmuş demektir. Alarm tetiklenir | `http.server.requests{status=5xx}` |
-| **Saturation (Doygunluk)** | CPU, bellek, thread ve DB bağlantı havuzu kapasiteleri izlenir. Tükenme öncesi uyarı verilir | `jvm.memory.used`, `system.cpu.usage` |
-| **DB Pool Durumu** | Aktif bağlantı sayısı limite yaklaşırsa sorgular kuyruğa girer, sistem yavaşlar | `hikaricp.connections.active` |
-| **CircuitBreaker Durumu** | Devre açıldığında dış servis çökmüş demektir. Operasyon ekibi bilgilendirilir | `resilience4j.circuitbreaker.state` |
-| **JVM GC Pauses** | GC duraklamaları uzarsa latency spike'ları oluşur. Heap ayarları gözden geçirilmeli | `jvm.gc.pause` |
+| **Latency (Gecikme)** | P99 latency artarsa süreç darboğazları ortaya çıkar, kullanıcılar uygulamayı terk etmeye başlar. | `http.server.requests` (Timer) |
+| **Traffic (Trafik)** | Ani yük (spike) kapasite planlamasını etkiler. Organik büyüme veya saldırıyı deşifre eder. | `http.server.requests.count` (Counter) |
+| **Error Rate (Hata Oranı)** | Hatalar artınca Error Budget tükenir; yeni feature çıkılması durdurulmalı, altyapı iyileştirilmelidir. | `http.server.requests{status=5xx}` |
+| **Saturation (DVM, CPU)** | JVM Memory tükenirse uygulamanın OOM Crash yaşayacağını öngörmemizi sağlar. | `jvm.memory.used`, `system.cpu.usage` |
+| **DB Pool Durumu** | Aktif bağlantılar limite ulaştığında (Connection Starvation) istekler Timeout'a düşer. | `hikaricp.connections.active` (Gauge) |
+| **CircuitBreaker Durumu** | Dışarıya giden bağlantılardaki bozukluklar, içeriyi de kilitlemesin diye Devre Açılır. | `resilience4j.circuitbreaker.state` |
+| **JVM GC Pauses** | Garbage Collection eylemi uzadığında thread'ler donar (Stop the world) ve sunucu kilitlenmiş sanılır. | `jvm.gc.pause` |
 
 Tüm metrikler **Prometheus** tarafından `/actuator/prometheus` endpoint'inden toplanır ve **Grafana** dashboard'larında görselleştirilir.
 
@@ -197,21 +204,31 @@ Request → TimeLimiter (3s) → Retry (3 deneme) → Bulkhead (max 10 eşzamanl
 | **Bulkhead** | Maks 10 eşzamanlı çağrı | Thread havuzunu koruma |
 | **CircuitBreaker** | %50 hata eşiği, 15s açık kalma | Çökmüş servislere istek göndermeme |
 
-### Production Grade Rules 
+### Production Grade Rules (Üretim Seviyesi Kuralları)
 
-Release It! (Michael Nygard) kitabındaki üretim-odaklı kuralların uygulanması:
+Bu proje salt bir CRUD uygulaması değil, Michael Nygard'ın meşhur "Release It!" kitabında tanımladığı üretim ortamı dayanıklılık kalıplarını (Production-Ready Patterns) uygular. Bir yazılımın prod ortamında "hayatta kalmasını" sağlayan bu kurallar ve projemizdeki karşılıkları şunlardır:
 
-| Kural | Ne İşe Yarar? | Uygulama | Bileşen |
-|-------|--------------|----------|--------|
-| **Rate Limiting** | Bir IP'nin sistemi aşırı istekle ezmesini (DDoS/bot/scraper) önler. Kapasite korunur | IP başı 20 req/sec, HTTP 429 + `Retry-After` | `RateLimitingFilter` |
-| **Pagination** | Milyonlarca kayıt sorgulanırken `OutOfMemoryError` riskini ortadan kaldırır | `findAll(page, size)`, MAX 100/sayfa | `ListProductsUseCase` |
-| **Back Pressure** | Üreticilerin (publisher) tüketicileri (subscriber) ezme riskini önler. Sınırsız kuyruk büyümesi engellenir | EventBus max 50 subscriber/event | `SimpleEventBus` |
-| **Input Validation** | OWASP Top 10'un ilk maddesi: geçersiz girdi ile SQL injection, XSS veya iş mantığı bozulması engellenir | `@Valid` + JSR-380 (`@NotBlank`, `@Positive`) | `CreateProductRequest` |
-| **Audit Logging** | Kim, ne zaman, hangi işlemi yaptı? Güvenlik denetimi ve yasal uyum (compliance) için zorunlu iz | POST/PUT/DELETE → userId + path + ip | `AuditLoggingInterceptor` |
-| **Log Rotation** | Logların diski doldurarak sistemi çökertmesini önler (Steady State ilkesi) | 50MB/dosya, 30 gün, 1GB toplam cap | `logback.xml` |
-| **Secrets** | Parolaların kaynak kodda saklanması güvenlik açığıdır. Ortam değişkeni ile dışsallaştırma zorunlu | `${JWT_SECRET}` env variable + K8s Secret | `application.yml` |
-| **Connection Pool** | Veritabanı bağlantılarının tükenmesini ve thread kilitlenmesini (Blocked Threads) önler | HikariCP: max=10, min=5, timeout=3s | `application.yml` |
-| **Graceful Shutdown** | Pod kapatılırken işlem ortasında kesilmeyi önler. Aktif istekler tamamlanır, yeni istek alınmaz | `server.shutdown: graceful` + 30s timeout | `application.yml` |
+*   **Rate Limiting (Hız Sınırlandırıcı):** Kötü niyetli botların veya yanlış yapılandırılmış bir API istemcisinin saniyeler içinde binlerce istek atarak sistemi çökertmesini engeller. Sistem, ani yük (spike) durumunda kapasitesini korumak için belirlenen sınırın üzerindeki istekleri **HTTP 429 Too Many Requests** ile reddeder. (`RateLimitingFilter`)
+*   **Pagination (Sayfalama):** Veritabanından yüz binlerce kaydın aynı anda RAM'e çekilmesini (OutOfMemoryError) engeller. İstekler her zaman "sayfa" ve "büyüklük" limitleriyle sınırlanmıştır. (`ListProductsUseCase`)
+*   **Back Pressure (Geri Basınç):** Asenkron olay yönetiminde (EventBus), olay üreticilerin hızı tüketicilerin (subscriber) işleme hızını geçerse sistemin şişmesini ve kuyruk boyutunun sonsuza gitmesini önler.
+*   **Input Validation (Girdi Doğrulama):** "IOW" (Input is root of all evil) prensibi gereği OWASP zafiyetlerine karşı ilk kalkandır. Formatı bozuk, beklenen boyutları aşan (örn. çok uzun bir string) veya negatif değer taşıyan girdiler, iş mantığına (Domain) ulaşmadan Web (Controller) katmanında tespit edilerek 400 Bad Request fırlatılır.
+*   **Audit Logging (Denetim İzi):** Sistemdeki her kritik değişimi (POST, PUT, DELETE) kimin (userId), nereden (IP), ne zaman yaptığını kalıcı olarak loglar. Sistem geriye dönük incelenmek istendiğinde ve yasal uyumlulukta vazgeçilmezdir. (`AuditLoggingInterceptor`)
+*   **Log Rotation (Log Döndürme):** Log dosyalarının sonsuza kadar büyüyerek disk alanını tüketmesini ve sunucuyu kilitlemesini engeller (Steady State ilkesi). Boyuta ulaştığında eski loglar arşivlenir.
+*   **Secrets Management (Gizli Bilgi Yönetimi):** Parolalar (DB şifresi) ve anahtarlar (JWT Secret) asla kaynak koda gömülmez. Sadece çalışma anında ortam değişkenlerinden (`ENV`) okunur.
+*   **Connection Pooling (Bağlantı Havuzu):** Her veritabanı işlemi için yeni bir ağ bağlantısı açmanın devasa maliyetini önler. `HikariCP` kullanarak minimum ve maksimum bağlantı eşikleriyle thread kilitlenmesi riskini azaltır.
+*   **Graceful Shutdown (Nazik Kapatılma):** Uygulama güncelleneceği zaman veya pod öldürüldüğünde, Linux çekirdeğinden gelen *SIGTERM* sinyalini yakalar. Yarım kalmış müşteri işlemlerini ve aktif HTTP isteklerini bitirene kadar (veya 30 saniye süreyle) bekler ve işlemi temizce kapatır.
+
+| Kural | Amacı / Etkisi | Uygulanan Bileşen |
+|-------|--------------|--------|
+| **Rate Limiting** | DDoS ve botları önleme | `RateLimitingFilter` |
+| **Pagination** | `OutOfMemoryError` önleme | `ListProductsUseCase` |
+| **Back Pressure** | Olay kuyruklarının şişmesini önleme | `SimpleEventBus` |
+| **Input Validation** | Veri tutarlılığı ve güvenlik | `CreateProductRequest` |
+| **Audit Logging** | Denetlenebilirlik ve Traceability | `AuditLoggingInterceptor` |
+| **Log Rotation** | Diskin dolmasını (Disk Exhaustion) önleme | `logback.xml` |
+| **Secrets** | Kod güvenliği ve taşınabilirlik | `application.yml`, `.env` |
+| **Connection Pool** | Bloklanmış thread ve connection süresi optimizasyonu | `application.yml` |
+| **Graceful Shutdown** | Veri kaybı ve kesinti (Downtime) engelleme | `application.yml` |
 
 ### Konteyner & Kubernetes
 
@@ -308,6 +325,7 @@ Proje boyunca alınan her önemli mimari karar belgelenmiştir:
 | 016 | Trace Propagation & Presenter | `docs/architecture/decisions/` |
 | 017 | Production Grade Rules | `docs/architecture/decisions/` |
 | 018 | Test Harness (WireMock) | `docs/architecture/decisions/` |
+| 019 | Presenter ViewModels & Filter Ordering | `docs/architecture/decisions/` |
 
 ---
 

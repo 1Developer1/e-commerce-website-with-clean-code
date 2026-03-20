@@ -11,15 +11,19 @@ import com.ecommerce.product.usecase.CreateProductUseCase;
 import com.ecommerce.product.usecase.ListProductsOutput;
 import com.ecommerce.product.usecase.ListProductsUseCase;
 import com.ecommerce.cart.adapter.in.controller.CartController;
+import com.ecommerce.cart.adapter.in.controller.AddToCartRequest;
+import com.ecommerce.cart.adapter.in.controller.ApplyDiscountRequest;
 import com.ecommerce.cart.usecase.AddToCartOutput;
 import com.ecommerce.cart.usecase.ApplyDiscountOutput;
 import com.ecommerce.order.usecase.PlaceOrderInput;
 import com.ecommerce.order.usecase.PlaceOrderOutput;
 import com.ecommerce.order.usecase.PlaceOrderUseCase;
 import com.ecommerce.payment.adapter.in.controller.PaymentController;
+import com.ecommerce.payment.adapter.in.controller.PayOrderRequest;
 import com.ecommerce.payment.usecase.PayOrderInput;
 import com.ecommerce.payment.usecase.PayOrderOutput;
 import com.ecommerce.shipping.api.ShippingService;
+import java.util.Map;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -69,16 +73,15 @@ public class ScenarioRunner implements CommandLineRunner {
         // Step 3: Add to Cart
         logger.info("\n[3] Adding to Cart...");
         UUID userId = UUID.randomUUID();
-        CartController.AddToCartRequest cartRequest = new CartController.AddToCartRequest(productOutput.id(), 1);
-        AddToCartOutput cartOutput = cartController.addToCart(userId, cartRequest);
-        logger.info("Cart: " + cartOutput.itemsCount() + " items, Total: " + cartOutput.totalAmount() + " " + cartOutput.currency());
+        AddToCartRequest cartRequest = new AddToCartRequest(productOutput.id(), 1);
+        Map<String, Object> cartOutput = cartController.addToCart(userId, cartRequest);
+        logger.info("Cart Updated: " + cartOutput.get("success") + " - " + cartOutput.get("message"));
 
         // Step 4: Apply Discount
         logger.info("\n[4] Applying Discount...");
-        CartController.ApplyDiscountRequest discountRequest = new CartController.ApplyDiscountRequest("SUMMER10");
-        ApplyDiscountOutput discountOutput = cartController.applyDiscount(userId, discountRequest);
-        logger.info("Discount Applied: " + discountOutput.success() + " (" + discountOutput.message() + ")");
-        logger.info("New Cart Total: " + discountOutput.newTotal());
+        ApplyDiscountRequest discountRequest = new ApplyDiscountRequest("SUMMER10");
+        Map<String, Object> discountOutput = cartController.applyDiscount(userId, discountRequest);
+        logger.info("Discount Applied: " + discountOutput.get("success") + " (" + discountOutput.get("message") + ")");
 
         // Step 5: Place Order (Use Case directly to get typed output for payment)
         logger.info("\n[5] Placing Order...");
@@ -87,9 +90,9 @@ public class ScenarioRunner implements CommandLineRunner {
         
         // Step 6: Pay Order
         logger.info("\n[6] Paying Order...");
-        PayOrderInput payInput = new PayOrderInput(orderOutput.orderId(), com.ecommerce.shared.domain.Money.of(orderOutput.totalAmount(), "USD"), "CREDIT_CARD");
-        PayOrderOutput payOutput = paymentController.payOrder(payInput);
-        logger.info("Payment Result: " + payOutput.success() + " (" + payOutput.message() + ")");
+        PayOrderRequest payRequest = new PayOrderRequest(orderOutput.orderId(), orderOutput.totalAmount(), "USD", "CREDIT_CARD");
+        Map<String, Object> payOutput = paymentController.payOrder(userId, payRequest);
+        logger.info("Payment Result: " + payOutput.get("success") + " (" + payOutput.get("message") + ")");
         
         // Step 7: Track Shipment
         logger.info("\n[7] Tracking Shipment...");
