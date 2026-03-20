@@ -11,6 +11,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
+
 @Component
 public class ProductPersistenceAdapter implements ProductRepository {
 
@@ -36,6 +38,18 @@ public class ProductPersistenceAdapter implements ProductRepository {
         return productSpringRepository.findAll().stream()
                 .map(this::mapToDomainEntity)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Product> findAll(int page, int size) {
+        return productSpringRepository.findAll(PageRequest.of(page, size)).stream()
+                .map(this::mapToDomainEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public long count() {
+        return productSpringRepository.count();
     }
 
     // --- Mappers ---

@@ -6,6 +6,12 @@ metadata:
     app: ecommerce-app
 spec:
   replicas: 2
+  # Zero-downtime deployment strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0   # Hiçbir zaman tüm pod'lar kapalı olmamalı
+      maxSurge: 1          # Aynı anda 1 fazla pod başlatılabilir
   selector:
     matchLabels:
       app: ecommerce-app
@@ -21,6 +27,18 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
+        
+        # Environment variables (Secrets externalization)
+        env:
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ecommerce-secrets
+              key: jwt-secret
+        - name: DB_POOL_MAX
+          value: "10"
+        - name: DB_POOL_MIN
+          value: "5"
         
         # Physical Bulkhead: CPU & RAM Limits
         resources:

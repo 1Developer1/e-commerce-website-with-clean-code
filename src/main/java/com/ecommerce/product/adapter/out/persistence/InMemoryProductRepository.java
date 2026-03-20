@@ -27,4 +27,20 @@ public class InMemoryProductRepository implements ProductRepository {
     public List<Product> findAll() {
         return new ArrayList<>(products.values());
     }
+
+    @Override
+    public List<Product> findAll(int page, int size) {
+        List<Product> all = new ArrayList<>(products.values());
+        int fromIndex = page * size;
+        if (fromIndex >= all.size()) {
+            return Collections.emptyList();
+        }
+        int toIndex = Math.min(fromIndex + size, all.size());
+        return all.subList(fromIndex, toIndex);
+    }
+
+    @Override
+    public long count() {
+        return products.size();
+    }
 }

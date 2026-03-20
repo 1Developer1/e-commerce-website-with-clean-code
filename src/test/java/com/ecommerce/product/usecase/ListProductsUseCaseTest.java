@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 
 class ListProductsUseCaseTest {
@@ -29,7 +30,8 @@ class ListProductsUseCaseTest {
         Product p1 = Product.create("P1", "D1", Money.of(BigDecimal.TEN, "USD"), 10);
         Product p2 = Product.create("P2", "D2", Money.of(BigDecimal.ONE, "USD"), 5);
 
-        when(productRepository.findAll()).thenReturn(Arrays.asList(p1, p2));
+        when(productRepository.findAll(anyInt(), anyInt())).thenReturn(Arrays.asList(p1, p2));
+        when(productRepository.count()).thenReturn(2L);
 
         ListProductsOutput output = listProductsUseCase.execute();
 
@@ -37,15 +39,31 @@ class ListProductsUseCaseTest {
         Assertions.assertEquals(2, output.products().size());
         Assertions.assertEquals("P1", output.products().get(0).name());
         Assertions.assertEquals("P2", output.products().get(1).name());
+        Assertions.assertEquals(0, output.page());
+        Assertions.assertEquals(20, output.size());
+        Assertions.assertEquals(2L, output.totalElements());
     }
 
     @Test
     void shouldReturnEmptyListWhenNoProducts() {
-        when(productRepository.findAll()).thenReturn(Collections.emptyList());
+        when(productRepository.findAll(anyInt(), anyInt())).thenReturn(Collections.emptyList());
+        when(productRepository.count()).thenReturn(0L);
 
         ListProductsOutput output = listProductsUseCase.execute();
 
         Assertions.assertNotNull(output);
         Assertions.assertTrue(output.products().isEmpty());
+        Assertions.assertEquals(0L, output.totalElements());
+    }
+
+    @Test
+    void shouldEnforceMaxPageSize() {
+        when(productRepository.findAll(anyInt(), anyInt())).thenReturn(Collections.emptyList());
+        when(productRepository.count()).thenReturn(0L);
+
+        ListProductsOutput output = listProductsUseCase.execute(0, 500);
+
+        // Max size should be capped at 100
+        Assertions.assertEquals(100, output.size());
     }
 }

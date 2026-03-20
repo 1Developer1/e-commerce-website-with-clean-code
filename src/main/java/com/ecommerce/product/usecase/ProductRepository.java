@@ -9,4 +9,6 @@ public interface ProductRepository {
     void save(Product product);
     Optional<Product> findById(UUID id);
     List<Product> findAll();
+    List<Product> findAll(int page, int size);
+    long count();
 }

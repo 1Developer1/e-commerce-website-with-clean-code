@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
+import jakarta.validation.Valid;
 import java.util.Map;
 
 @RestController
@@ -27,12 +29,19 @@ public class ProductController {
     }
 
     @PostMapping
-    public Map<String, Object> createProduct(@RequestBody CreateProductInput input) {
+    public Map<String, Object> createProduct(@Valid @RequestBody CreateProductRequest request) {
+        CreateProductInput input = new CreateProductInput(
+                request.name(), request.description(),
+                request.priceAmount(), request.priceCurrency(),
+                request.initialStock()
+        );
         return presenter.presentCreateProduct(createProductUseCase.execute(input));
     }
     
     @GetMapping
-    public Map<String, Object> listProducts() {
-        return presenter.presentProductList(listProductsUseCase.execute());
+    public Map<String, Object> listProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return presenter.presentProductList(listProductsUseCase.execute(page, size));
     }
 }

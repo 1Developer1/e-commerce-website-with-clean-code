@@ -1,10 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+    <!-- Console Appender (JSON — Logstash Encoder) -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder" />
     </appender>
 
+    <!-- Rolling File Appender (Steady State — Log Rotation) -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/ecommerce.log</file>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder" />
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- Daily rotation -->
+            <fileNamePattern>logs/ecommerce.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <!-- Max single file size -->
+            <maxFileSize>50MB</maxFileSize>
+            <!-- Keep 30 days of history -->
+            <maxHistory>30</maxHistory>
+            <!-- Total log cap: 1GB -->
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- Audit Logger — dedicated for audit trail -->
+    <logger name="AUDIT" level="INFO" additivity="false">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
+    </logger>
+
     <root level="INFO">
         <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
     </root>
 </configuration>

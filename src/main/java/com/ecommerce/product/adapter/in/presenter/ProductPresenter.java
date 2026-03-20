@@ -49,6 +49,9 @@ public class ProductPresenter {
                 .collect(Collectors.toList());
 
         Map<String, Object> viewModel = new LinkedHashMap<>();
+        viewModel.put("page", output.page());
+        viewModel.put("size", output.size());
+        viewModel.put("totalElements", output.totalElements());
         viewModel.put("totalCount", formattedProducts.size());
         viewModel.put("products", formattedProducts);
         return viewModel;

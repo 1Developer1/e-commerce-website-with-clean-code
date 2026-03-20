@@ -75,8 +75,8 @@ module/
 ### Ürünler
 | Metot | Endpoint | Açıklama | Yetki |
 |-------|----------|----------|-------|
-| `POST` | `/products` | Yeni ürün oluşturur | 🔒 JWT |
-| `GET` | `/products` | Tüm ürünleri listeler | 🔒 JWT |
+| `POST` | `/products` | Yeni ürün oluşturur (`@Valid` input validation) | 🔒 JWT |
+| `GET` | `/products?page=0&size=20` | Ürünleri sayfalayarak listeler (max 100/sayfa) | 🔒 JWT |
 
 ### Sepet
 | Metot | Endpoint | Açıklama | Yetki |
@@ -178,6 +178,20 @@ Request → TimeLimiter (3s) → Retry (3 deneme) → Bulkhead (max 10 eşzamanl
 | **Bulkhead** | Maks 10 eşzamanlı çağrı | Thread havuzunu koruma |
 | **CircuitBreaker** | %50 hata eşiği, 15s açık kalma | Çökmüş servislere istek göndermeme |
 
+### Production Grade Rules (Release It!)
+
+| Kural | Uygulama | Bileşen |
+|-------|----------|--------|
+| **Rate Limiting** | IP başı 20 req/sec, HTTP 429 + `Retry-After` | `RateLimitingFilter` |
+| **Pagination** | `findAll(page, size)`, MAX 100/sayfa | `ListProductsUseCase` |
+| **Back Pressure** | EventBus max 50 subscriber/event | `SimpleEventBus` |
+| **Input Validation** | `@Valid` + JSR-380 (`@NotBlank`, `@Positive`) | `CreateProductRequest` |
+| **Audit Logging** | POST/PUT/DELETE → userId + path + ip | `AuditLoggingInterceptor` |
+| **Log Rotation** | 50MB/dosya, 30 gün, 1GB toplam cap | `logback.xml` |
+| **Secrets** | `${JWT_SECRET}` env variable + K8s Secret | `application.yml` |
+| **Connection Pool** | HikariCP: max=10, min=5, timeout=3s | `application.yml` |
+| **Graceful Shutdown** | `server.shutdown: graceful` + 30s timeout | `application.yml` |
+
 ### Konteyner & Kubernetes
 
 ```dockerfile
@@ -189,12 +203,23 @@ USER ecommerceuser
 ```
 
 ```yaml
-# k8s/deployment.yaml
+# k8s/deployment.yaml — Zero-Downtime Deployment
+strategy:
+  type: RollingUpdate
+  rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
 resources:
   limits: { cpu: "500m", memory: "512Mi" }
-  requests: { cpu: "250m", memory: "256Mi" }
 livenessProbe: /actuator/health/liveness
 readinessProbe: /actuator/health/readiness
+```
+
+```yaml
+# k8s/hpa.yaml — Fail-Safe Autoscaling
+minReplicas: 2
+maxReplicas: 5
+scaleDown:
+  stabilizationWindowSeconds: 300  # 5 dk bekle
+  policies: [{ type: Pods, value: 1 }]  # Tek seferde maks 1 pod azalt
 ```
 
 ---
@@ -260,6 +285,8 @@ Proje boyunca alınan her önemli mimari karar belgelenmiştir:
 | 014 | SRE Deployment & Logging | `docs/architecture/decisions/` |
 | 015 | Spring Boot & JPA Integration | `docs/architecture/decisions/` |
 | 016 | Trace Propagation & Presenter | `docs/architecture/decisions/` |
+| 017 | Production Grade Rules | `docs/architecture/decisions/` |
+| 018 | Test Harness (WireMock) | `docs/architecture/decisions/` |
 
 ---
 
@@ -331,8 +358,12 @@ mvn test -Dtest=ArchitectureTest
 # Sadece Fitness testleri
 mvn test -Dtest=FitnessTest
 
-# Resilience4j Chaos testleri (WireMock ile)
-mvn test -Dtest=CreditCardAdapterTest
+# WireMock Chaos testleri (gerçek HTTP seviyesi)
+mvn test "-Dtest=CreditCardAdapterWireMockTest"
+mvn test "-Dtest=DummyShippingProviderWireMockTest"
+
+# Rate Limiter integration test
+mvn test "-Dtest=RateLimitingFilterTest"
 ```
 
 | Test Kategorisi | Dosya | Ne Test Eder? |
@@ -340,7 +371,10 @@ mvn test -Dtest=CreditCardAdapterTest
 | **Unit Tests** | `*UseCaseTest.java` | İş mantığı (mock repository ile) |
 | **Architecture** | `ArchitectureTest.java` | Katman ihlalleri, döngüsel bağımlılıklar |
 | **Fitness** | `FitnessTest.java` | Performans SLA eşikleri |
-| **Chaos** | `CreditCardAdapterTest.java` | CircuitBreaker, TimeLimiter, Retry |
+| **Chaos (Override)** | `CreditCardAdapterTest.java` | CircuitBreaker, TimeLimiter, Retry (method override) |
+| **Chaos (WireMock)** | `CreditCardAdapterWireMockTest.java` | Gerçek HTTP: 500 crash, latency, connection refused, corrupt response |
+| **Chaos (WireMock)** | `DummyShippingProviderWireMockTest.java` | Gerçek HTTP: 500, slow response, fallback tracking |
+| **Integration** | `RateLimitingFilterTest.java` | Rate Limiter: HTTP 429 + Retry-After header |
 
 ---
 
@@ -352,10 +386,11 @@ mvn test -Dtest=CreditCardAdapterTest
 | **Build** | Maven |
 | **Web Framework** | Spring Boot 3.x |
 | **Persistence** | Spring Data JPA + H2 (In-Memory) / PostgreSQL |
+| **Validation** | Jakarta Bean Validation (JSR-380) — `@Valid`, `@NotBlank`, `@Positive` |
 | **Security** | Spring Security + JWT (java-jwt) |
-| **Resilience** | Resilience4j (CircuitBreaker, Retry, Bulkhead, TimeLimiter) |
+| **Resilience** | Resilience4j (CircuitBreaker, Retry, Bulkhead, TimeLimiter, **RateLimiter**) |
 | **Observability** | Micrometer + Prometheus + OpenTelemetry |
-| **Logging** | SLF4J + Logback + Logstash JSON Encoder |
+| **Logging** | SLF4J + Logback (RollingFileAppender + Logstash JSON Encoder) |
 | **Testing** | JUnit 5 + Mockito + ArchUnit + WireMock |
 | **Code Quality** | PMD 7 + Checkstyle + JDepend |
-| **Containerization** | Docker (Multi-stage Alpine) + Kubernetes |
+| **Containerization** | Docker (Multi-stage Alpine) + Kubernetes (Deployment + HPA) |

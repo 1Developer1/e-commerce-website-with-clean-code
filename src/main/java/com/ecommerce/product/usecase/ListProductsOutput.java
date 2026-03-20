@@ -4,6 +4,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-public record ListProductsOutput(List<ProductSummary> products) {
+public record ListProductsOutput(List<ProductSummary> products, int page, int size, long totalElements) {
     public record ProductSummary(UUID id, String name, BigDecimal price, String currency) {}
 }
