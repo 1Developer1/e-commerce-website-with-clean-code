@@ -130,10 +130,21 @@ Client Request → JwtAuthenticationFilter → SecurityFilterChain → Controlle
 
 ## 📊 Gözlemlenebilirlik (Observability)
 
-### Metrikler (Micrometer + Prometheus)
-- Spring Boot Actuator üzerinden `/actuator/prometheus` endpoint'i
-- JVM metrikleri, HTTP istek sayıları, veritabanı bağlantı havuzu durumu
-- Grafana dashboard'ları ile görselleştirmeye hazır
+SRE'nin "Four Golden Signals" (Dört Altın Sinyal) yaklaşımına göre sistem sağlığı izlenir:
+
+### İzlenen Metrikler ve Nedenleri
+
+| Metrik | Neden İzlenir? | Endpoint / Kaynak |
+|--------|---------------|-------------------|
+| **Latency (Gecikme)** | P99 latency artarsa kullanıcı deneyimi bozulur. SLA ihlali tespit edilir | `http.server.requests` |
+| **Traffic (Trafik)** | Anlık istek sayısı izlenerek kapasite planlaması yapılır. Ani spike'lar DDoS saldırısı olabilir | `http.server.requests.count` |
+| **Error Rate (Hata Oranı)** | 5xx oranı arttığında sistem sağlığı bozulmuş demektir. Alarm tetiklenir | `http.server.requests{status=5xx}` |
+| **Saturation (Doygunluk)** | CPU, bellek, thread ve DB bağlantı havuzu kapasiteleri izlenir. Tükenme öncesi uyarı verilir | `jvm.memory.used`, `system.cpu.usage` |
+| **DB Pool Durumu** | Aktif bağlantı sayısı limite yaklaşırsa sorgular kuyruğa girer, sistem yavaşlar | `hikaricp.connections.active` |
+| **CircuitBreaker Durumu** | Devre açıldığında dış servis çökmüş demektir. Operasyon ekibi bilgilendirilir | `resilience4j.circuitbreaker.state` |
+| **JVM GC Pauses** | GC duraklamaları uzarsa latency spike'ları oluşur. Heap ayarları gözden geçirilmeli | `jvm.gc.pause` |
+
+Tüm metrikler **Prometheus** tarafından `/actuator/prometheus` endpoint'inden toplanır ve **Grafana** dashboard'larında görselleştirilir.
 
 ### Dağıtık İzleme (OpenTelemetry)
 - Micrometer Tracing + OpenTelemetry bridge
@@ -147,6 +158,8 @@ Client Request → JwtAuthenticationFilter → SecurityFilterChain → Controlle
                   │                  │           traceparent header
 ```
 
+> **Neden Distributed Tracing?** Bir sipariş isteği Gateway → OrderUseCase → PaymentAdapter → Dış API arasında gezinir. Bir yerde yavaşlama varsa, `traceId` ile o spesifik isteğin tüm yolculuğunu görebilir ve darboğazı saniyeler içinde tespit edebilirsiniz.
+
 ### JSON Loglama (Logstash Encoder)
 ```json
 {
@@ -157,6 +170,12 @@ Client Request → JwtAuthenticationFilter → SecurityFilterChain → Controlle
   "traceId": "abc123def456",
   "spanId": "789xyz"
 }
+```
+
+### Audit Logging
+Mutating HTTP istekleri (POST/PUT/DELETE) otomatik olarak denetim izine kaydedilir:
+```
+[AUDIT] user=e49d60ea method=POST path=/orders status=200 ip=192.168.1.1
 ```
 
 ---
@@ -178,19 +197,21 @@ Request → TimeLimiter (3s) → Retry (3 deneme) → Bulkhead (max 10 eşzamanl
 | **Bulkhead** | Maks 10 eşzamanlı çağrı | Thread havuzunu koruma |
 | **CircuitBreaker** | %50 hata eşiği, 15s açık kalma | Çökmüş servislere istek göndermeme |
 
-### Production Grade Rules (Release It!)
+### Production Grade Rules 
 
-| Kural | Uygulama | Bileşen |
-|-------|----------|--------|
-| **Rate Limiting** | IP başı 20 req/sec, HTTP 429 + `Retry-After` | `RateLimitingFilter` |
-| **Pagination** | `findAll(page, size)`, MAX 100/sayfa | `ListProductsUseCase` |
-| **Back Pressure** | EventBus max 50 subscriber/event | `SimpleEventBus` |
-| **Input Validation** | `@Valid` + JSR-380 (`@NotBlank`, `@Positive`) | `CreateProductRequest` |
-| **Audit Logging** | POST/PUT/DELETE → userId + path + ip | `AuditLoggingInterceptor` |
-| **Log Rotation** | 50MB/dosya, 30 gün, 1GB toplam cap | `logback.xml` |
-| **Secrets** | `${JWT_SECRET}` env variable + K8s Secret | `application.yml` |
-| **Connection Pool** | HikariCP: max=10, min=5, timeout=3s | `application.yml` |
-| **Graceful Shutdown** | `server.shutdown: graceful` + 30s timeout | `application.yml` |
+Release It! (Michael Nygard) kitabındaki üretim-odaklı kuralların uygulanması:
+
+| Kural | Ne İşe Yarar? | Uygulama | Bileşen |
+|-------|--------------|----------|--------|
+| **Rate Limiting** | Bir IP'nin sistemi aşırı istekle ezmesini (DDoS/bot/scraper) önler. Kapasite korunur | IP başı 20 req/sec, HTTP 429 + `Retry-After` | `RateLimitingFilter` |
+| **Pagination** | Milyonlarca kayıt sorgulanırken `OutOfMemoryError` riskini ortadan kaldırır | `findAll(page, size)`, MAX 100/sayfa | `ListProductsUseCase` |
+| **Back Pressure** | Üreticilerin (publisher) tüketicileri (subscriber) ezme riskini önler. Sınırsız kuyruk büyümesi engellenir | EventBus max 50 subscriber/event | `SimpleEventBus` |
+| **Input Validation** | OWASP Top 10'un ilk maddesi: geçersiz girdi ile SQL injection, XSS veya iş mantığı bozulması engellenir | `@Valid` + JSR-380 (`@NotBlank`, `@Positive`) | `CreateProductRequest` |
+| **Audit Logging** | Kim, ne zaman, hangi işlemi yaptı? Güvenlik denetimi ve yasal uyum (compliance) için zorunlu iz | POST/PUT/DELETE → userId + path + ip | `AuditLoggingInterceptor` |
+| **Log Rotation** | Logların diski doldurarak sistemi çökertmesini önler (Steady State ilkesi) | 50MB/dosya, 30 gün, 1GB toplam cap | `logback.xml` |
+| **Secrets** | Parolaların kaynak kodda saklanması güvenlik açığıdır. Ortam değişkeni ile dışsallaştırma zorunlu | `${JWT_SECRET}` env variable + K8s Secret | `application.yml` |
+| **Connection Pool** | Veritabanı bağlantılarının tükenmesini ve thread kilitlenmesini (Blocked Threads) önler | HikariCP: max=10, min=5, timeout=3s | `application.yml` |
+| **Graceful Shutdown** | Pod kapatılırken işlem ortasında kesilmeyi önler. Aktif istekler tamamlanır, yeni istek alınmaz | `server.shutdown: graceful` + 30s timeout | `application.yml` |
 
 ### Konteyner & Kubernetes
 
