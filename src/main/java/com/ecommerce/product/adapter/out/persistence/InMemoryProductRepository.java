@@ -43,4 +43,9 @@ public class InMemoryProductRepository implements ProductRepository {
     public long count() {
         return products.size();
     }
+
+    @Override
+    public void deleteById(UUID id) {
+        products.remove(id);
+    }
 }

@@ -26,6 +26,13 @@ public class Cart {
         return new Cart(UUID.randomUUID(), userId);
     }
 
+    public static Cart restore(UUID id, UUID userId, List<CartItem> items, Money discount) {
+        Cart cart = new Cart(id, userId);
+        cart.items.addAll(items);
+        cart.discount = discount;
+        return cart;
+    }
+
     public void applyDiscount(Money discount) {
         if (discount == null) throw new IllegalArgumentException("Discount cannot be null");
         this.discount = discount;

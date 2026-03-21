@@ -24,13 +24,15 @@ class PlaceOrderUseCaseTest {
 
     private OrderRepository orderRepository;
     private CartService cartService;
+    private com.ecommerce.shared.event.EventBus eventBus;
     private PlaceOrderUseCase placeOrderUseCase;
 
     @BeforeEach
     void setUp() {
         orderRepository = Mockito.mock(OrderRepository.class);
         cartService = Mockito.mock(CartService.class);
-        placeOrderUseCase = new PlaceOrderUseCase(orderRepository, cartService);
+        eventBus = Mockito.mock(com.ecommerce.shared.event.EventBus.class);
+        placeOrderUseCase = new PlaceOrderUseCase(orderRepository, cartService, eventBus);
     }
 
     @Test

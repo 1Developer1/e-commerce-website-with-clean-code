@@ -34,8 +34,8 @@ public class OrderPersistenceAdapter implements OrderRepository {
     }
 
     @Override
-    public List<Order> findByUserId(UUID userId) {
-        return orderSpringRepository.findByUserId(userId).stream()
+    public List<Order> findByUserId(UUID userId, int page, int size) {
+        return orderSpringRepository.findByUserId(userId, org.springframework.data.domain.PageRequest.of(page, size)).stream()
                 .map(this::mapToDomainEntity)
                 .collect(Collectors.toList());
     }

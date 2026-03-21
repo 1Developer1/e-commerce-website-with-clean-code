@@ -56,4 +56,24 @@ public class ProductPresenter {
         viewModel.put("products", formattedProducts);
         return viewModel;
     }
+
+    public Map<String, Object> presentUpdateProduct(com.ecommerce.product.usecase.ProductResponse productResponse) {
+        Map<String, Object> viewModel = new LinkedHashMap<>();
+        viewModel.put("success", true);
+        viewModel.put("message", "Product updated successfully");
+        
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", productResponse.id());
+        item.put("name", productResponse.name());
+        item.put("displayPrice", productResponse.displayPrice());
+        viewModel.put("product", item);
+        return viewModel;
+    }
+
+    public Map<String, Object> presentDeleteProduct(boolean success) {
+        Map<String, Object> viewModel = new LinkedHashMap<>();
+        viewModel.put("success", success);
+        viewModel.put("message", success ? "Product deleted successfully" : "Product not found or delete failed");
+        return viewModel;
+    }
 }

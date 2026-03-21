@@ -11,4 +11,5 @@ public interface ProductRepository {
     List<Product> findAll();
     List<Product> findAll(int page, int size);
     long count();
+    void deleteById(UUID id);
 }

@@ -5,3 +5,7 @@ target/
 .DS_Store
 *.log
 .vscode/
+
+### Logs ###
+logs/
+*.log

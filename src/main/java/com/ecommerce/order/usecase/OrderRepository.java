@@ -8,5 +8,5 @@ import java.util.List;
 public interface OrderRepository {
     void save(Order order);
     Optional<Order> findById(UUID id);
-    List<Order> findByUserId(UUID userId);
+    List<Order> findByUserId(UUID userId, int page, int size);
 }

@@ -5,9 +5,9 @@ import java.util.UUID;
 
 public class Product {
     private final UUID id;
-    private final String name;
-    private final String description;
-    private final Money price;
+    private String name;
+    private String description;
+    private Money price;
     private int stockQuantity;
 
     public Product(UUID id, String name, String description, Money price, int stockQuantity) {
@@ -32,6 +32,19 @@ public class Product {
     }
 
     // Business Methods
+
+    public void update(String name, String description, Money price, Integer stockQuantity) {
+        if (name != null) {
+            if (name.trim().isEmpty()) throw new IllegalArgumentException("Product name cannot be empty");
+            this.name = name;
+        }
+        if (description != null) this.description = description;
+        if (price != null) this.price = price;
+        if (stockQuantity != null) {
+            if (stockQuantity < 0) throw new IllegalArgumentException("Stock quantity cannot be negative");
+            this.stockQuantity = stockQuantity;
+        }
+    }
 
     public void decreaseStock(int quantity) {
         if (quantity <= 0) {

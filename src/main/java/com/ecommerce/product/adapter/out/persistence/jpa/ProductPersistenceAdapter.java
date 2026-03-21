@@ -52,6 +52,11 @@ public class ProductPersistenceAdapter implements ProductRepository {
         return productSpringRepository.count();
     }
 
+    @Override
+    public void deleteById(UUID id) {
+        productSpringRepository.deleteById(id);
+    }
+
     // --- Mappers ---
 
     private ProductJpaEntity mapToJpaEntity(Product product) {

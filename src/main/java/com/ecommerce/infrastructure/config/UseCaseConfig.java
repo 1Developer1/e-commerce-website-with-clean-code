@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Primary;
 
 import com.ecommerce.cart.adapter.out.persistence.InMemoryCartRepository;
 import com.ecommerce.cart.usecase.AddToCartUseCase;
+import com.ecommerce.cart.usecase.GetCartUseCase;
 import com.ecommerce.cart.usecase.CartRepository;
 import com.ecommerce.cart.usecase.ApplyDiscountUseCase;
 import com.ecommerce.cart.usecase.port.DiscountProvider;
@@ -13,6 +14,8 @@ import com.ecommerce.cart.api.CartService;
 import com.ecommerce.cart.internal.CartModule;
 
 import com.ecommerce.order.adapter.out.persistence.InMemoryOrderRepository;
+import com.ecommerce.order.usecase.GetOrderByIdUseCase;
+import com.ecommerce.order.usecase.GetOrdersUseCase;
 import com.ecommerce.order.usecase.OrderRepository;
 import com.ecommerce.order.usecase.PlaceOrderUseCase;
 import com.ecommerce.order.adapter.in.event.OrderPaymentEventHandler;
@@ -64,19 +67,8 @@ public class UseCaseConfig {
     }
 
     // --- REPOSITORIES (In-Memory for now) ---
-    // Product and Order repositories are now provided by JPA Persistence Adapters via @Component scanning
+    // Product, Order and Cart repositories are now provided by JPA Persistence Adapters via @Component scanning
 
-    @Bean
-    public CartRepository cartRepository() {
-        return new InMemoryCartRepository();
-    }
-
-    @Bean
-    public DiscountRepository discountRepository() {
-        InMemoryDiscountRepository repo = new InMemoryDiscountRepository();
-        repo.save(com.ecommerce.discount.entity.Discount.create("SUMMER10", com.ecommerce.shared.domain.Money.of(new BigDecimal("10.00"), "USD")));
-        return repo;
-    }
 
     @Bean
     public ShippingRepository shippingRepository() {
@@ -95,6 +87,21 @@ public class UseCaseConfig {
     }
 
     @Bean
+    public com.ecommerce.product.usecase.UpdateProductUseCase updateProductUseCase(ProductRepository productRepository) {
+        return new com.ecommerce.product.usecase.UpdateProductUseCase(productRepository);
+    }
+
+    @Bean
+    public com.ecommerce.product.usecase.DeleteProductUseCase deleteProductUseCase(ProductRepository productRepository) {
+        return new com.ecommerce.product.usecase.DeleteProductUseCase(productRepository);
+    }
+
+    @Bean
+    public com.ecommerce.product.usecase.DeductProductStockUseCase deductProductStockUseCase(ProductRepository productRepository) {
+        return new com.ecommerce.product.usecase.DeductProductStockUseCase(productRepository);
+    }
+
+    @Bean
     public GetDiscountUseCase getDiscountUseCase(DiscountRepository discountRepository) {
         return new GetDiscountUseCase(discountRepository);
     }
@@ -102,6 +109,11 @@ public class UseCaseConfig {
     @Bean
     public AddToCartUseCase addToCartUseCase(CartRepository cartRepository, ProductRepository productRepository) {
         return new AddToCartUseCase(cartRepository, productRepository);
+    }
+
+    @Bean
+    public GetCartUseCase getCartUseCase(CartRepository cartRepository) {
+        return new GetCartUseCase(cartRepository);
     }
 
     @Bean
@@ -123,8 +135,18 @@ public class UseCaseConfig {
     }
 
     @Bean
-    public PlaceOrderUseCase placeOrderUseCase(OrderRepository orderRepository, CartService cartService) {
-        return new PlaceOrderUseCase(orderRepository, cartService);
+    public PlaceOrderUseCase placeOrderUseCase(OrderRepository orderRepository, CartService cartService, com.ecommerce.shared.event.EventBus eventBus) {
+        return new PlaceOrderUseCase(orderRepository, cartService, eventBus);
+    }
+
+    @Bean
+    public GetOrdersUseCase getOrdersUseCase(OrderRepository orderRepository) {
+        return new GetOrdersUseCase(orderRepository);
+    }
+
+    @Bean
+    public GetOrderByIdUseCase getOrderByIdUseCase(OrderRepository orderRepository) {
+        return new GetOrderByIdUseCase(orderRepository);
     }
 
     @Bean

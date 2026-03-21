@@ -33,4 +33,29 @@ public class CartPresenter {
         viewModel.put("timestamp", LocalDateTime.now().format(FORMATTER));
         return viewModel;
     }
+
+    public Map<String, Object> presentGetCart(com.ecommerce.cart.usecase.GetCartOutput output) {
+        Map<String, Object> viewModel = new LinkedHashMap<>();
+        if (!output.success() || output.cart() == null) {
+            viewModel.put("error", output.message());
+            return viewModel;
+        }
+        
+        var cart = output.cart();
+        viewModel.put("userId", cart.getUserId().toString());
+        
+        java.util.List<Map<String, Object>> items = cart.getItems().stream().map(item -> {
+            Map<String, Object> itemMap = new LinkedHashMap<>();
+            itemMap.put("productId", item.getProductId().toString());
+            itemMap.put("quantity", item.getQuantity());
+            return itemMap;
+        }).collect(java.util.stream.Collectors.toList());
+        viewModel.put("items", items);
+        
+        if (cart.getDiscount() != null) {
+             viewModel.put("discountAmount", cart.getDiscount().getAmount().toPlainString());
+             viewModel.put("discountCurrency", cart.getDiscount().getCurrency());
+        }
+        return viewModel;
+    }
 }

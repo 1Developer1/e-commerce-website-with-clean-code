@@ -24,9 +24,11 @@ public class InMemoryOrderRepository implements OrderRepository {
     }
 
     @Override
-    public List<Order> findByUserId(UUID userId) {
+    public List<Order> findByUserId(UUID userId, int page, int size) {
         return orders.values().stream()
                 .filter(order -> order.getUserId().equals(userId))
+                .skip((long) page * size)
+                .limit(size)
                 .collect(Collectors.toList());
     }
 }

@@ -1,0 +1,155 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------< com.ecommerce:clean-ecommerce >--------------------
+[INFO] Building clean-ecommerce 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ clean-ecommerce ---
+[INFO] Deleting D:\python\e-commerce-app\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ clean-ecommerce ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ clean-ecommerce ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 103 source files with javac [debug release 17] to target\classes
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ clean-ecommerce ---
+[INFO] skip non existing resourceDirectory D:\python\e-commerce-app\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ clean-ecommerce ---
+[INFO] Changes detected - recompiling the module! :dependency
+[INFO] Compiling 17 source files with javac [debug release 17] to target\test-classes
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[13,34] cannot find symbol
+  symbol:   class OrderStatus
+  location: package com.ecommerce.order.entity
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[14,35] package com.ecommerce.shared.entity does not exist
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrdersUseCaseTest.java:[12,34] cannot find symbol
+  symbol:   class OrderStatus
+  location: package com.ecommerce.order.entity
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrdersUseCaseTest.java:[13,35] package com.ecommerce.shared.entity does not exist
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[31,28] cannot find symbol
+  symbol:   variable randomUtils
+  location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[32,27] cannot find symbol
+  symbol:   variable randomUtils
+  location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[33,54] cannot find symbol
+  symbol:   class Money
+  location: class com.ecommerce.order.usecase.GetOrderByIdUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[33,116] cannot find symbol
+  symbol:   variable OrderStatus
+  location: class com.ecommerce.order.usecase.GetOrderByIdUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[45,45] cannot find symbol
+  symbol:   method id()
+  location: class com.ecommerce.order.entity.Order
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[56,28] cannot find symbol
+  symbol:   variable randomUtils
+  location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[57,27] cannot find symbol
+  symbol:   variable randomUtils
+  location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[79,28] cannot find symbol
+  symbol:   variable randomUtils
+  location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[80,28] cannot find symbol
+  symbol:   variable randomUtils
+  location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[81,31] cannot find symbol
+  symbol:   variable randomUtils
+  location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[82,55] cannot find symbol
+  symbol:   class Money
+  location: class com.ecommerce.order.usecase.GetOrderByIdUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[82,117] cannot find symbol
+  symbol:   variable OrderStatus
+  location: class com.ecommerce.order.usecase.GetOrderByIdUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrdersUseCaseTest.java:[28,65] cannot find symbol
+  symbol:   class Money
+  location: class com.ecommerce.order.usecase.GetOrdersUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrdersUseCaseTest.java:[28,124] cannot find symbol
+  symbol:   variable OrderStatus
+  location: class com.ecommerce.order.usecase.GetOrdersUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrdersUseCaseTest.java:[29,65] cannot find symbol
+  symbol:   class Money
+  location: class com.ecommerce.order.usecase.GetOrdersUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrdersUseCaseTest.java:[29,124] cannot find symbol
+  symbol:   variable OrderStatus
+  location: class com.ecommerce.order.usecase.GetOrdersUseCaseTest
+[INFO] 20 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  8.044 s
+[INFO] Finished at: 2026-03-21T01:58:29+03:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.11.0:testCompile (default-testCompile) on project clean-ecommerce: Compilation failure: Compilation failure: 
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[13,34] cannot find symbol
+[ERROR]   symbol:   class OrderStatus
+[ERROR]   location: package com.ecommerce.order.entity
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[14,35] package com.ecommerce.shared.entity does not exist
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrdersUseCaseTest.java:[12,34] cannot find symbol
+[ERROR]   symbol:   class OrderStatus
+[ERROR]   location: package com.ecommerce.order.entity
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrdersUseCaseTest.java:[13,35] package com.ecommerce.shared.entity does not exist
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[31,28] cannot find symbol
+[ERROR]   symbol:   variable randomUtils
+[ERROR]   location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[32,27] cannot find symbol
+[ERROR]   symbol:   variable randomUtils
+[ERROR]   location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[33,54] cannot find symbol
+[ERROR]   symbol:   class Money
+[ERROR]   location: class com.ecommerce.order.usecase.GetOrderByIdUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[33,116] cannot find symbol
+[ERROR]   symbol:   variable OrderStatus
+[ERROR]   location: class com.ecommerce.order.usecase.GetOrderByIdUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[45,45] cannot find symbol
+[ERROR]   symbol:   method id()
+[ERROR]   location: class com.ecommerce.order.entity.Order
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[56,28] cannot find symbol
+[ERROR]   symbol:   variable randomUtils
+[ERROR]   location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[57,27] cannot find symbol
+[ERROR]   symbol:   variable randomUtils
+[ERROR]   location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[79,28] cannot find symbol
+[ERROR]   symbol:   variable randomUtils
+[ERROR]   location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[80,28] cannot find symbol
+[ERROR]   symbol:   variable randomUtils
+[ERROR]   location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[81,31] cannot find symbol
+[ERROR]   symbol:   variable randomUtils
+[ERROR]   location: class java.util.UUID
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[82,55] cannot find symbol
+[ERROR]   symbol:   class Money
+[ERROR]   location: class com.ecommerce.order.usecase.GetOrderByIdUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrderByIdUseCaseTest.java:[82,117] cannot find symbol
+[ERROR]   symbol:   variable OrderStatus
+[ERROR]   location: class com.ecommerce.order.usecase.GetOrderByIdUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrdersUseCaseTest.java:[28,65] cannot find symbol
+[ERROR]   symbol:   class Money
+[ERROR]   location: class com.ecommerce.order.usecase.GetOrdersUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrdersUseCaseTest.java:[28,124] cannot find symbol
+[ERROR]   symbol:   variable OrderStatus
+[ERROR]   location: class com.ecommerce.order.usecase.GetOrdersUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrdersUseCaseTest.java:[29,65] cannot find symbol
+[ERROR]   symbol:   class Money
+[ERROR]   location: class com.ecommerce.order.usecase.GetOrdersUseCaseTest
+[ERROR] /D:/python/e-commerce-app/src/test/java/com/ecommerce/order/usecase/GetOrdersUseCaseTest.java:[29,124] cannot find symbol
+[ERROR]   symbol:   variable OrderStatus
+[ERROR]   location: class com.ecommerce.order.usecase.GetOrdersUseCaseTest
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
