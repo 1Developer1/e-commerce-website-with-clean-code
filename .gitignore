@@ -9,3 +9,6 @@ target/
 ### Logs ###
 logs/
 *.log
+
+### Build outputs ###
+build*.txt
