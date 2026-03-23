@@ -5,7 +5,7 @@ import com.ecommerce.order.usecase.PlaceOrderOutput;
 import com.ecommerce.order.usecase.GetOrderByIdOutput;
 import com.ecommerce.order.usecase.GetOrdersOutput;
 import com.ecommerce.order.entity.Order;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Component; // removed
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
  * Transforms UseCase ResponseModels into View-friendly ViewModels.
  * Clean Architecture: This class lives in the Interface Adapters layer.
  */
-@Component
 public class OrderPresenter {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");

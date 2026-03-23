@@ -57,7 +57,7 @@ public class ProductPresenter {
         return viewModel;
     }
 
-    public Map<String, Object> presentUpdateProduct(com.ecommerce.product.usecase.ProductResponse productResponse) {
+    public Map<String, Object> presentUpdateProduct(com.ecommerce.product.usecase.dto.ProductResponse productResponse) {
         Map<String, Object> viewModel = new LinkedHashMap<>();
         viewModel.put("success", true);
         viewModel.put("message", "Product updated successfully");
@@ -65,7 +65,9 @@ public class ProductPresenter {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("id", productResponse.id());
         item.put("name", productResponse.name());
-        item.put("displayPrice", productResponse.displayPrice());
+        item.put("description", productResponse.description());
+        item.put("price", productResponse.priceAmount() + " " + productResponse.priceCurrency());
+        item.put("stockQuantity", productResponse.stockQuantity());
         viewModel.put("product", item);
         return viewModel;
     }

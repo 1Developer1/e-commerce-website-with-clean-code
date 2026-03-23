@@ -19,7 +19,7 @@ public class CartJpaEntity {
     private BigDecimal discountAmount;
     private String discountCurrency;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "cart_items", joinColumns = @JoinColumn(name = "cart_id"))
     private List<CartItemEmbeddable> items = new ArrayList<>();
 

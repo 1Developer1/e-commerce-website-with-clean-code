@@ -5,7 +5,7 @@ import com.ecommerce.product.usecase.CreateProductUseCase;
 import com.ecommerce.product.usecase.ListProductsUseCase;
 import com.ecommerce.product.usecase.UpdateProductUseCase;
 import com.ecommerce.product.usecase.DeleteProductUseCase;
-import com.ecommerce.product.usecase.ProductResponse;
+import com.ecommerce.product.usecase.dto.ProductResponse;
 import com.ecommerce.product.adapter.in.presenter.ProductPresenter;
 
 import org.springframework.http.HttpStatus;

@@ -1,6 +1,7 @@
 package com.ecommerce.product.usecase;
 
 import com.ecommerce.product.entity.Product;
+import com.ecommerce.product.usecase.dto.ProductResponse;
 import com.ecommerce.shared.domain.Money;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -26,10 +27,11 @@ public class UpdateProductUseCase {
         productRepository.save(product);
         
         return new ProductResponse(
-            product.getId().toString(),
+            product.getId(),
             product.getName(),
             product.getDescription(),
-            product.getPrice().toString(),
+            product.getPrice().getAmount(),
+            product.getPrice().getCurrency(),
             product.getStockQuantity()
         );
     }
