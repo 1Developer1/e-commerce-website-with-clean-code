@@ -114,6 +114,88 @@ module/
 
 ---
 
+## 🌐 Web API Standartları
+
+Bu projede uygulanan Web API tasarım standartları, REST konvansiyonları ve üretim seviyesi kalite kontrolleri aşağıda açıklanmıştır.
+
+### 1. API Versiyonlama (URI-based Versioning)
+Tüm iş domain endpoint'leri `/api/v1/` prefix'i altındadır. Bu, gelecekte breaking change yapıldığında mevcut istemcilerin (`v1`) korunmasını ve yeni istemcilerin (`/api/v2/`) yönlendirilmesini sağlar. Altyapı ve kimlik doğrulama endpoint'leri (`/auth/**`, `/actuator/**`) versiyonlanmaz çünkü bunlar uygulama semantiğinden bağımsız, platform seviyesi servislerdir.
+
+### 2. HTTP Durum Kodları (RFC 7231)
+Her HTTP metodu, RFC 7231 standardına uygun durum kodu döner:
+
+| İşlem | HTTP Metodu | Durum Kodu | Açıklama |
+|-------|-------------|------------|----------|
+| Kaynak oluşturma | `POST` | `201 Created` | Yeni kaynak başarıyla oluşturuldu |
+| Kaynak okuma | `GET` | `200 OK` | Kaynak başarıyla döndürüldü |
+| Kaynak güncelleme | `PUT` | `200 OK` | Kaynak başarıyla güncellendi |
+| Kaynak silme | `DELETE` | `204 No Content` | Kaynak silindi, response body yok |
+| İş kuralı ihlali | `POST` | `422 Unprocessable Entity` | İstek geçerli ama iş kuralı nedeniyle işlenemez (ör: ödeme başarısız) |
+| Doğrulama hatası | Herhangi | `400 Bad Request` | `@Valid` input validation başarısız |
+| Yetkisiz erişim | Herhangi | `401 Unauthorized` | JWT token eksik veya geçersiz |
+| Kaynak bulunamadı | `GET` | `404 Not Found` | İstenen kaynak mevcut değil |
+
+### 3. Tutarlı Yanıt Formatı (ResponseEntity)
+Tüm Controller metotları `ResponseEntity<T>` döner. Bu yaklaşım sayesinde:
+- HTTP status code, header ve body üzerinde tam kontrol sağlanır
+- Ödeme başarısız olduğunda `200 OK` yerine `422 Unprocessable Entity` döndürülebilir
+- Frontend ekipleri status code'a güvenerek akış kontrolü yapabilir
+
+### 4. RESTful URI Tasarımı
+URI'ler **isim (noun)** tabanlıdır, **fiil (verb)** içermez:
+- ✅ `POST /api/v1/cart/items` (sepete öğe ekle)
+- ❌ ~~`POST /cart/add`~~ (fiil içeren eski yapı)
+- ✅ `POST /api/v1/cart/discounts` (indirim uygula)
+- ❌ ~~`POST /cart/discount`~~ (tekil ve fiil benzeri eski yapı)
+
+### 5. OpenAPI / Swagger Dokümantasyonu
+`springdoc-openapi-starter-webmvc-ui` entegre edilmiştir. Uygulama çalışırken:
+- **Swagger UI:** [`/swagger-ui.html`](http://localhost:8080/swagger-ui.html) — interaktif API keşfi ve test
+- **OpenAPI JSON:** `/v3/api-docs` — frontend SDK üretimi (codegen) için makine tarafından okunabilir şema
+- Her endpoint `@Operation` ve `@Tag` anotasyonlarıyla belgelenmiştir
+- JWT Bearer Authentication şeması Swagger UI üzerinden test edilebilir
+
+### 6. CORS Konfigürasyonu (Cross-Origin Resource Sharing)
+`SecurityConfig` üzerinde global CORS politikası tanımlıdır:
+- **İzin verilen metotlar:** `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`
+- **İzin verilen header'lar:** `Authorization`, `Content-Type`, `X-Requested-With`
+- **Expose edilen header'lar:** `X-Total-Count`, `X-Total-Pages` (pagination bilgisi)
+- **Pre-flight cache:** 3600 saniye (1 saat)
+- Production ortamında `CORS_ALLOWED_ORIGINS` environment variable'ı ile izin verilen alan adları kısıtlanmalıdır.
+
+### 7. Hata Zarfı — RFC 7807 (Problem Detail)
+Tüm hata yanıtları standart bir yapıda döner. Bu sayede frontend ekipleri her hata türünü aynı parser ile işleyebilir:
+
+```json
+{
+  "type": "https://api.ecommerce.com/errors/validation",
+  "title": "Validation Failed",
+  "status": 400,
+  "detail": "One or more fields failed validation.",
+  "violations": [
+    { "field": "name", "message": "Product name is required" }
+  ],
+  "timestamp": "2026-03-23T22:00:00Z"
+}
+```
+
+**Güvenlik:** Generic (beklenmeyen) exception mesajları **asla** istemciye sızdırılmaz. Yalnızca `"An unexpected error occurred. Please try again later."` mesajı döner, gerçek hata detayı sunucu loglarına yazılır.
+
+### 8. Input Validation (Girdi Doğrulama)
+Controller sınırında Jakarta Bean Validation (JSR-380) ile girdi doğrulanır. Geçersiz veri domain katmanına ulaşmadan reddedilir:
+
+| Anotasyon | Kullanım | Açıklama |
+|-----------|----------|----------|
+| `@NotBlank` | `name` | Boş veya null olamaz |
+| `@Size(min, max)` | `name`, `description`, `currency` | Karakter uzunluğu sınırı |
+| `@Positive` | `price`, `stockQuantity` | Sıfırdan büyük olmalı |
+| `@Valid` | Controller metot parametresi | Doğrulamayı tetikler |
+
+### 9. Presenter Pattern (ViewModel Dönüşümü)
+UseCase çıktıları doğrudan istemciye dönmez. `ProductPresenter`, `OrderPresenter` gibi Presenter sınıfları UseCase Response'unu ViewModel'e (`Map<String, Object>`) dönüştürür. Bu, Clean Architecture'ın **Output Port** prensibine uygun şekilde iç katman verisinin dış katmana sızdırılmasını engeller.
+
+---
+
 ## 🔒 Güvenlik (Authentication & Authorization)
 
 ```
