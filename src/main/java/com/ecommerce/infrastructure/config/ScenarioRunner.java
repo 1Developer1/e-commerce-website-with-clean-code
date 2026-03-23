@@ -74,13 +74,13 @@ public class ScenarioRunner implements CommandLineRunner {
         logger.info("\n[3] Adding to Cart...");
         UUID userId = UUID.randomUUID();
         AddToCartRequest cartRequest = new AddToCartRequest(productOutput.id(), 1);
-        Map<String, Object> cartOutput = cartController.addToCart(userId, cartRequest);
+        Map<String, Object> cartOutput = cartController.addToCart(userId, cartRequest).getBody();
         logger.info("Cart Updated: " + cartOutput.get("success") + " - " + cartOutput.get("message"));
 
         // Step 4: Apply Discount
         logger.info("\n[4] Applying Discount...");
         ApplyDiscountRequest discountRequest = new ApplyDiscountRequest("SUMMER10");
-        Map<String, Object> discountOutput = cartController.applyDiscount(userId, discountRequest);
+        Map<String, Object> discountOutput = cartController.applyDiscount(userId, discountRequest).getBody();
         logger.info("Discount Applied: " + discountOutput.get("success") + " (" + discountOutput.get("message") + ")");
 
         // Step 5: Place Order (Use Case directly to get typed output for payment)
@@ -91,7 +91,7 @@ public class ScenarioRunner implements CommandLineRunner {
         // Step 6: Pay Order
         logger.info("\n[6] Paying Order...");
         PayOrderRequest payRequest = new PayOrderRequest(orderOutput.orderId(), orderOutput.totalAmount(), "USD", "CREDIT_CARD");
-        Map<String, Object> payOutput = paymentController.payOrder(userId, payRequest);
+        Map<String, Object> payOutput = paymentController.payOrder(userId, payRequest).getBody();
         logger.info("Payment Result: " + payOutput.get("success") + " (" + payOutput.get("message") + ")");
         
         // Step 7: Track Shipment

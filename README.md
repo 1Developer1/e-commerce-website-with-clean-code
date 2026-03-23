@@ -67,32 +67,40 @@ module/
 
 ## 🔌 API Endpoint'leri
 
+> **API Version:** `v1` — Tüm endpoint'ler `/api/v1/` prefix'i altındadır.
+> **Swagger UI:** Uygulama çalışırken [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) adresinden interaktif API dokümantasyonuna erişilebilir.
+
 ### Kimlik Doğrulama
-| Metot | Endpoint | Açıklama | Yetki |
-|-------|----------|----------|-------|
-| `POST` | `/auth/login` | JWT token üretir | 🔓 Public |
+| Metot | Endpoint | Açıklama | HTTP Kodu | Yetki |
+|-------|----------|----------|-----------|-------|
+| `POST` | `/auth/login` | JWT token üretir | `200 OK` | 🔓 Public |
 
 ### Ürünler
-| Metot | Endpoint | Açıklama | Yetki |
-|-------|----------|----------|-------|
-| `POST` | `/products` | Yeni ürün oluşturur (`@Valid` input validation) | 🔒 JWT |
-| `GET` | `/products?page=0&size=20` | Ürünleri sayfalayarak listeler (max 100/sayfa) | 🔒 JWT |
+| Metot | Endpoint | Açıklama | HTTP Kodu | Yetki |
+|-------|----------|----------|-----------|-------|
+| `POST` | `/api/v1/products` | Yeni ürün oluşturur (`@Valid`) | `201 Created` | 🔒 JWT |
+| `GET` | `/api/v1/products?page=0&size=20` | Ürünleri sayfalayarak listeler | `200 OK` | 🔒 JWT |
+| `PUT` | `/api/v1/products/{id}` | Ürünü günceller (`@Valid`) | `200 OK` | 🔒 JWT |
+| `DELETE` | `/api/v1/products/{id}` | Ürünü siler | `204 No Content` | 🔒 JWT |
 
 ### Sepet
-| Metot | Endpoint | Açıklama | Yetki |
-|-------|----------|----------|-------|
-| `POST` | `/cart` | Sepete ürün ekler | 🔒 JWT |
-| `POST` | `/cart/discount` | İndirim kuponu uygular | 🔒 JWT |
+| Metot | Endpoint | Açıklama | HTTP Kodu | Yetki |
+|-------|----------|----------|-----------|-------|
+| `GET` | `/api/v1/cart` | Sepeti görüntüler | `200 OK` | 🔒 JWT |
+| `POST` | `/api/v1/cart/items` | Sepete ürün ekler | `201 Created` | 🔒 JWT |
+| `POST` | `/api/v1/cart/discounts` | İndirim kuponu uygular | `200 OK` | 🔒 JWT |
 
 ### Siparişler
-| Metot | Endpoint | Açıklama | Yetki |
-|-------|----------|----------|-------|
-| `POST` | `/orders` | Sepetten sipariş oluşturur | 🔒 JWT |
+| Metot | Endpoint | Açıklama | HTTP Kodu | Yetki |
+|-------|----------|----------|-----------|-------|
+| `POST` | `/api/v1/orders` | Sepetten sipariş oluşturur | `201 Created` | 🔒 JWT |
+| `GET` | `/api/v1/orders?page=0&size=20` | Siparişleri listeler | `200 OK` | 🔒 JWT |
+| `GET` | `/api/v1/orders/{id}` | Sipariş detayını getirir | `200 OK` | 🔒 JWT |
 
 ### Ödeme
-| Metot | Endpoint | Açıklama | Yetki |
-|-------|----------|----------|-------|
-| `POST` | `/payments` | Siparişi öder (Strategy: CREDIT_CARD / BANK_TRANSFER) | 🔒 JWT |
+| Metot | Endpoint | Açıklama | HTTP Kodu | Yetki |
+|-------|----------|----------|-----------|-------|
+| `POST` | `/api/v1/payments` | Siparişi öder (Strategy: CREDIT_CARD / BANK_TRANSFER) | `200 OK` / `422` | 🔒 JWT |
 
 ### Operasyonel (Actuator)
 | Metot | Endpoint | Açıklama | Yetki |
@@ -100,6 +108,7 @@ module/
 | `GET` | `/actuator/health/liveness` | Liveness probe (K8s) | 🔓 Public |
 | `GET` | `/actuator/health/readiness` | Readiness probe (K8s) | 🔓 Public |
 | `GET` | `/actuator/prometheus` | Prometheus metrics scraping | 🔓 Public |
+| `GET` | `/swagger-ui.html` | OpenAPI / Swagger UI | 🔓 Public |
 
 > **Not:** `userId` artık request body'den alınmıyor. JWT token'dan `@AuthenticationPrincipal` ile otomatik olarak çıkarılıyor.
 
