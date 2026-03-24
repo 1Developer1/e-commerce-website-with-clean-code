@@ -1,6 +1,6 @@
 # Clean Architecture E-Commerce System 🛍️
 
-Java 17 ile geliştirilmiş, **Robert C. Martin'in Clean Architecture** prensiplerini, SOLID tasarımını, **SRE (Site Reliability Engineering)** kalıplarını ve **güvenlik/gözlemlenebilirlik** katmanlarını uygulayan üretim hazırlığına sahip bir E-Ticaret backend sistemi.
+Java 17 ile geliştirilmiş, **SOLID tasarımını, **SRE (Site Reliability Engineering)** kalıplarını ve **güvenlik/gözlemlenebilirlik** katmanlarını uygulayan üretim hazırlığına sahip bir E-Ticaret backend sistemi.
 
 ---
 
