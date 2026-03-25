@@ -4,6 +4,7 @@ import { Navbar } from '../../../shared/components/Navbar/Navbar';
 import { ProductGrid } from '../components/ProductGrid';
 import { CreateProductModal } from '../components/CreateProductModal';
 import { ProductGridSkeleton } from '../../../shared/components/Skeleton/Skeleton';
+import { useAddToCart } from '../../cart/hooks/useAddToCart';
 import styles from './CatalogPage.module.css';
 
 /**
@@ -13,6 +14,7 @@ import styles from './CatalogPage.module.css';
 export function CatalogPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { data, isLoading, isError, error, refetch } = useProducts();
+  const addToCart = useAddToCart();
 
   return (
     <div className={styles.page}>
@@ -51,7 +53,12 @@ export function CatalogPage() {
         )}
 
         {/* Success State */}
-        {data && <ProductGrid products={data.products} />}
+        {data && (
+          <ProductGrid 
+            products={data.products} 
+            onAddToCart={(productId) => addToCart.mutate({ productId, quantity: 1 })}
+          />
+        )}
       </main>
 
       <CreateProductModal

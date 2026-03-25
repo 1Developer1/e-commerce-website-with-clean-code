@@ -1,0 +1,76 @@
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.imagePlaceholder {
+  width: 60px;
+  height: 60px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.priceRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-size-sm);
+}
+
+.price {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent-secondary);
+}
+
+.quantity {
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+}
+
+.removeButton {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  padding: var(--space-xs);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.removeButton:hover:not(:disabled) {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.removeButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.2;
+}

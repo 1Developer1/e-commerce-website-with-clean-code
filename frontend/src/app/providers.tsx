@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '../infrastructure/auth/authContext';
 import { GlobalErrorBoundary } from '../infrastructure/errorBoundary/GlobalErrorBoundary';
+import { UIProvider } from '../features/common/context/UIContext';
 import type { ReactNode } from 'react';
 
 /**
@@ -32,7 +33,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          {children}
+          <UIProvider>
+            {children}
+          </UIProvider>
         </AuthProvider>
       </QueryClientProvider>
     </GlobalErrorBoundary>
