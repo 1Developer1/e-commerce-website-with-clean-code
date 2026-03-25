@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: clean-commerce-db
+    environment:
+      POSTGRES_USER: sa
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: clean_commerce_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sa -d clean_commerce_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Spring Boot Backend (Clean Architecture)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: clean-commerce-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/clean_commerce_db
+      - SPRING_DATASOURCE_USERNAME=sa
+      - SPRING_DATASOURCE_PASSWORD=password
+      - SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect
+      - JWT_SECRET=super_secret_production_key_for_clean_commerce_app
+      - JWT_EXPIRATION=3600000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # 3. React + Vite Frontend
+  frontend:
+    image: node:20-alpine
+    container_name: clean-commerce-frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8080
+    command: >
+      sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
