@@ -24,8 +24,8 @@ class GetOrdersUseCaseTest {
         GetOrdersUseCase useCase = new GetOrdersUseCase(repository);
 
         UUID userId = UUID.randomUUID();
-        Order order1 = Order.restore(UUID.randomUUID(), userId, java.util.Collections.emptyList(), null, Order.Status.CREATED, java.time.LocalDateTime.now(), Money.of(new java.math.BigDecimal("100"), "USD"));
-        Order order2 = Order.restore(UUID.randomUUID(), userId, java.util.Collections.emptyList(), null, Order.Status.CREATED, java.time.LocalDateTime.now(), Money.of(new java.math.BigDecimal("200"), "USD"));
+        Order order1 = Order.restore(UUID.randomUUID(), userId, "User One", "Addr 1", java.util.Collections.emptyList(), null, Order.Status.CREATED, java.time.LocalDateTime.now(), Money.of(new java.math.BigDecimal("100"), "USD"));
+        Order order2 = Order.restore(UUID.randomUUID(), userId, "User Two", "Addr 2", java.util.Collections.emptyList(), null, Order.Status.CREATED, java.time.LocalDateTime.now(), Money.of(new java.math.BigDecimal("200"), "USD"));
         
         when(repository.findByUserId(userId, 0, 10)).thenReturn(List.of(order1, order2));
 

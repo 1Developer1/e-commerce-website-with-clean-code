@@ -15,7 +15,7 @@ import java.util.Map;
 @Component
 public class PaymentPresenter {
 
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     public Map<String, Object> presentPayOrder(PayOrderOutput output) {
         Map<String, Object> viewModel = new LinkedHashMap<>();

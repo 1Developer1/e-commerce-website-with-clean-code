@@ -64,7 +64,12 @@ public class ProductController {
     public ResponseEntity<Map<String, Object>> listProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(presenter.presentProductList(listProductsUseCase.execute(page, size)));
+        var output = listProductsUseCase.execute(page, size);
+        int totalPages = size > 0 ? (int) Math.ceil((double) output.totalElements() / size) : 0;
+        return ResponseEntity.ok()
+                .header("X-Total-Count", String.valueOf(output.totalElements()))
+                .header("X-Total-Pages", String.valueOf(totalPages))
+                .body(presenter.presentProductList(output));
     }
 
     @Operation(summary = "Ürünü günceller", description = "Mevcut ürünü kısmi olarak günceller.")
@@ -78,10 +83,13 @@ public class ProductController {
         return ResponseEntity.ok(presenter.presentUpdateProduct(response));
     }
 
-    @Operation(summary = "Ürünü siler", description = "Ürünü ID ile siler. Başarılı: 204 No Content.")
+    @Operation(summary = "Ürünü siler", description = "Ürünü ID ile siler. Başarılı: 204 No Content. Bulunamazsa: 404 Not Found.")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable UUID id) {
-        deleteProductUseCase.execute(id);
+        boolean deleted = deleteProductUseCase.execute(id);
+        if (!deleted) {
+            return ResponseEntity.notFound().build();
+        }
         return ResponseEntity.noContent().build();
     }
 }

@@ -5,9 +5,9 @@ CREATE TABLE products (
     id UUID PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    price DECIMAL(10, 2) NOT NULL,
-    currency VARCHAR(3) NOT NULL,
-    stock INT NOT NULL,
+    price_amount DECIMAL(10, 2) NOT NULL,
+    price_currency VARCHAR(3) NOT NULL,
+    stock_quantity INT NOT NULL,
     created_at TIMESTAMP,
     updated_at TIMESTAMP
 );
@@ -16,19 +16,19 @@ CREATE TABLE carts (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL,
     status VARCHAR(50) NOT NULL,
+    discount_amount DECIMAL(10, 2),
+    discount_currency VARCHAR(3),
     created_at TIMESTAMP,
     updated_at TIMESTAMP
 );
 
 CREATE TABLE cart_items (
-    id UUID PRIMARY KEY,
     cart_jpa_entity_id UUID NOT NULL REFERENCES carts(id),
     product_id UUID NOT NULL,
     product_name VARCHAR(255) NOT NULL,
     quantity INT NOT NULL,
-    unit_price DECIMAL(10, 2) NOT NULL,
-    currency VARCHAR(3) NOT NULL,
-    created_at TIMESTAMP
+    price_amount DECIMAL(10, 2) NOT NULL,
+    price_currency VARCHAR(3) NOT NULL
 );
 
 CREATE TABLE orders (
@@ -36,6 +36,8 @@ CREATE TABLE orders (
     user_id UUID NOT NULL,
     recipient_name VARCHAR(255) NOT NULL,
     shipping_address TEXT NOT NULL,
+    discount_amount DECIMAL(10, 2),
+    discount_currency VARCHAR(3),
     total_amount DECIMAL(10, 2) NOT NULL,
     currency VARCHAR(3) NOT NULL,
     order_status VARCHAR(50) NOT NULL,
@@ -48,8 +50,8 @@ CREATE TABLE order_items (
     product_id UUID NOT NULL,
     product_name VARCHAR(255) NOT NULL,
     quantity INT NOT NULL,
-    unit_price DECIMAL(10, 2) NOT NULL,
-    currency VARCHAR(3) NOT NULL
+    price_amount DECIMAL(10, 2) NOT NULL,
+    price_currency VARCHAR(3) NOT NULL
 );
 
 CREATE TABLE discounts (
@@ -71,7 +73,7 @@ CREATE TABLE outbox_events (
 );
 
 -- Örnek veri (Mock Dummy Data for Evaluators)
-INSERT INTO products (id, name, description, price, currency, stock, created_at, updated_at)
+INSERT INTO products (id, name, description, price_amount, price_currency, stock_quantity, created_at, updated_at)
 VALUES 
     ('11111111-1111-1111-1111-111111111111', 'MacBook Pro', 'Apple M3 Pro işlemcili 16 inç MacBook Pro', 1999.99, 'USD', 10, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
     ('22222222-2222-2222-2222-222222222222', 'AirPods Max', 'Gürültü engelleyici kablosuz kulak üstü kulaklık', 549.00, 'USD', 25, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

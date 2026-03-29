@@ -43,3 +43,28 @@ management:
 jwt:
   secret: ${JWT_SECRET:changeme-in-production}
   expiration: ${JWT_EXPIRATION:3600000}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      payment:
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 15s
+        sliding-window-size: 10
+  bulkhead:
+    instances:
+      payment:
+        max-concurrent-calls: 10
+        max-wait-duration: 500ms
+  timelimiter:
+    instances:
+      payment:
+        timeout-duration: 3s
+  retry:
+    instances:
+      payment:
+        max-attempts: 3
+        wait-duration: 500ms

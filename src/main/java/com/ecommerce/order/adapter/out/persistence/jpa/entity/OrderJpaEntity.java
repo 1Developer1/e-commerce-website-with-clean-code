@@ -17,7 +17,13 @@ public class OrderJpaEntity {
     @Column(nullable = false)
     private UUID userId;
 
-    @Column(nullable = false)
+    @Column(name = "recipient_name", nullable = false)
+    private String recipientName;
+
+    @Column(name = "shipping_address", nullable = false)
+    private String shippingAddress;
+
+    @Column(name = "order_status", nullable = false)
     private String status;
 
     @Column(nullable = false)
@@ -46,6 +52,12 @@ public class OrderJpaEntity {
 
     public UUID getUserId() { return userId; }
     public void setUserId(UUID userId) { this.userId = userId; }
+
+    public String getRecipientName() { return recipientName; }
+    public void setRecipientName(String recipientName) { this.recipientName = recipientName; }
+
+    public String getShippingAddress() { return shippingAddress; }
+    public void setShippingAddress(String shippingAddress) { this.shippingAddress = shippingAddress; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

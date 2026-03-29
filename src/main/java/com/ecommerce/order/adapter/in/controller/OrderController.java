@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import jakarta.validation.Valid;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -44,8 +46,10 @@ public class OrderController {
 
     @Operation(summary = "Sipariş oluşturur", description = "Aktif sepetten sipariş oluşturur. Başarılı: 201 Created.")
     @PostMapping
-    public ResponseEntity<Map<String, Object>> placeOrder(@AuthenticationPrincipal UUID userId) {
-        PlaceOrderInput input = new PlaceOrderInput(userId);
+    public ResponseEntity<Map<String, Object>> placeOrder(
+            @AuthenticationPrincipal UUID userId,
+            @Valid @RequestBody PlaceOrderRequest request) {
+        PlaceOrderInput input = new PlaceOrderInput(userId, request.recipientName(), request.shippingAddress());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(presenter.presentPlaceOrder(placeOrderUseCase.execute(input)));
     }
@@ -57,7 +61,11 @@ public class OrderController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         GetOrdersInput input = new GetOrdersInput(userId, page, size);
-        return ResponseEntity.ok(presenter.presentGetOrders(getOrdersUseCase.execute(input)));
+        var output = getOrdersUseCase.execute(input);
+        int count = output.orders() != null ? output.orders().size() : 0;
+        return ResponseEntity.ok()
+                .header("X-Total-Count", String.valueOf(count))
+                .body(presenter.presentGetOrders(output));
     }
 
     @Operation(summary = "Sipariş detayını getirir", description = "Belirtilen ID'ye ait sipariş detayını döner.")

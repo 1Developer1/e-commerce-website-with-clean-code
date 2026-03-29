@@ -44,7 +44,7 @@ class PlaceOrderUseCaseTest {
 
         when(cartService.getCartForOrder(userId)).thenReturn(Optional.of(cartDto));
 
-        PlaceOrderInput input = new PlaceOrderInput(userId);
+        PlaceOrderInput input = new PlaceOrderInput(userId, "John Doe", "123 Main St");
         PlaceOrderOutput output = placeOrderUseCase.execute(input);
 
         Assertions.assertTrue(output.success());
@@ -70,7 +70,7 @@ class PlaceOrderUseCaseTest {
 
         when(cartService.getCartForOrder(userId)).thenReturn(Optional.of(emptyCart));
 
-        PlaceOrderInput input = new PlaceOrderInput(userId);
+        PlaceOrderInput input = new PlaceOrderInput(userId, "John Doe", "123 Main St");
         PlaceOrderOutput output = placeOrderUseCase.execute(input);
 
         Assertions.assertFalse(output.success());

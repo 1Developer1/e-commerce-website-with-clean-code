@@ -93,10 +93,10 @@ public class CreditCardAdapter implements PaymentGateway {
             java.net.http.HttpRequest request = requestBuilder.build();
 
             java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() >= 500) {
-                throw new RuntimeException("External payment service returned 500");
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                return true;
             }
-            return true; 
+            throw new RuntimeException("Payment failed with HTTP status: " + response.statusCode());
         } catch (Exception e) {
             logger.error("[CreditCardAdapter] Network/IO Error: {} - {}", e.getClass().getName(), e.getMessage(), e);
             throw new RuntimeException("Network/IO Error: " + e.getClass().getName() + " - " + e.getMessage(), e);
@@ -104,7 +104,7 @@ public class CreditCardAdapter implements PaymentGateway {
     }
 
     private boolean fallbackPayment() {
-        logger.info("[CreditCardAdapter-Fallback] Ödeme sistemi kapalı veya yoğun. Lokal test için İŞLEM ONAYLANDI (Mock Success).");
-        return true;
+        logger.info("[CreditCardAdapter-Fallback] Ödeme sistemi kapalı veya yoğun. İşlem reddedildi.");
+        return false;
     }
 }

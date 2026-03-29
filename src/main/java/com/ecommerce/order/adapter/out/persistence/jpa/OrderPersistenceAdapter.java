@@ -46,6 +46,8 @@ public class OrderPersistenceAdapter implements OrderRepository {
         OrderJpaEntity entity = new OrderJpaEntity();
         entity.setId(order.getId());
         entity.setUserId(order.getUserId());
+        entity.setRecipientName(order.getRecipientName());
+        entity.setShippingAddress(order.getShippingAddress());
         entity.setStatus(order.getStatus().name());
         entity.setCreatedAt(order.getCreatedAt());
 
@@ -92,6 +94,8 @@ public class OrderPersistenceAdapter implements OrderRepository {
         return Order.restore(
             entity.getId(),
             entity.getUserId(),
+            entity.getRecipientName(),
+            entity.getShippingAddress(),
             items,
             discount,
             status,

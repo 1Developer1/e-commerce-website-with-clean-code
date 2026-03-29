@@ -4,7 +4,6 @@ import com.ecommerce.payment.usecase.PayOrderInput;
 import com.ecommerce.payment.usecase.PayOrderOutput;
 import com.ecommerce.payment.usecase.PayOrderUseCase;
 import com.ecommerce.payment.adapter.in.presenter.PaymentPresenter;
-import com.ecommerce.shared.domain.Money;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,8 +34,7 @@ public class PaymentController {
     @Operation(summary = "Siparişi öder", description = "Belirtilen ödeme yöntemiyle sipariş ödemesi yapar.")
     @PostMapping
     public ResponseEntity<Map<String, Object>> payOrder(@AuthenticationPrincipal UUID userId, @Valid @RequestBody PayOrderRequest request) {
-        Money money = Money.of(request.amount(), request.currency());
-        PayOrderInput input = new PayOrderInput(request.orderId(), money, request.method());
+        PayOrderInput input = new PayOrderInput(request.orderId(), userId, request.method());
         PayOrderOutput output = payOrderUseCase.execute(input);
 
         if (!output.success()) {

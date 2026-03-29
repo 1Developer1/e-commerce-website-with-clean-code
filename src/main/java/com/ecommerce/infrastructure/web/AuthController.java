@@ -1,35 +1,79 @@
-package com.ecommerce.adapter.in.web;
+package com.ecommerce.infrastructure.web;
 
-import com.ecommerce.infrastructure.security.JwtUtil;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.ecommerce.user.usecase.LoginInput;
+import com.ecommerce.user.usecase.LoginOutput;
+import com.ecommerce.user.usecase.LoginUseCase;
+import com.ecommerce.user.usecase.RegisterUserInput;
+import com.ecommerce.user.usecase.RegisterUserOutput;
+import com.ecommerce.user.usecase.RegisterUserUseCase;
 
-import java.util.HashMap;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 
+@Tag(name = "Auth", description = "Kullanıcı kaydı ve giriş işlemleri")
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
 
-    private final JwtUtil jwtUtil;
+    private final RegisterUserUseCase registerUserUseCase;
+    private final LoginUseCase loginUseCase;
 
-    public AuthController(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
+    public AuthController(RegisterUserUseCase registerUserUseCase, LoginUseCase loginUseCase) {
+        this.registerUserUseCase = registerUserUseCase;
+        this.loginUseCase = loginUseCase;
     }
 
-    // Mock Login Endpoint to generate tokens easily for testing.
-    // In a real application, this would validate credentials first via an AuthUseCase.
+    public record RegisterRequest(
+            @NotBlank(message = "Email is required") @Email(message = "Must be a valid email") String email,
+            @NotBlank(message = "Password is required") @Size(min = 8, message = "Password must be at least 8 characters") String password,
+            @NotBlank(message = "Name is required") String name) {}
+
+    public record LoginRequest(
+            @NotBlank(message = "Email is required") String email,
+            @NotBlank(message = "Password is required") String password) {}
+
+    @Operation(summary = "Yeni kullanıcı kaydı")
+    @PostMapping("/register")
+    public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody RegisterRequest request) {
+        RegisterUserOutput output = registerUserUseCase.execute(
+                new RegisterUserInput(request.email(), request.password(), request.name()));
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("success", output.success());
+        body.put("message", output.message());
+        if (output.success()) {
+            body.put("userId", output.userId());
+            body.put("email", output.email());
+        }
+
+        HttpStatus status = output.success() ? HttpStatus.CREATED : HttpStatus.CONFLICT;
+        return ResponseEntity.status(status).body(body);
+    }
+
+    @Operation(summary = "Kullanıcı girişi ve JWT token üretimi")
     @PostMapping("/login")
-    public Map<String, String> login() {
-        // Mocking a successful login always returning a fixed mock UUID for simplicity in testing
-        UUID mockUserId = UUID.fromString("e49d60ea-5247-41ec-b2c6-1e6634123512");
-        String token = jwtUtil.generateToken(mockUserId);
-        
-        Map<String, String> response = new HashMap<>();
-        response.put("token", token);
-        response.put("userId", mockUserId.toString());
-        return response;
+    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
+        LoginOutput output = loginUseCase.execute(new LoginInput(request.email(), request.password()));
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("success", output.success());
+        body.put("message", output.message());
+        if (output.success()) {
+            body.put("token", output.token());
+            body.put("userId", output.userId());
+        }
+
+        HttpStatus status = output.success() ? HttpStatus.OK : HttpStatus.UNAUTHORIZED;
+        return ResponseEntity.status(status).body(body);
     }
 }

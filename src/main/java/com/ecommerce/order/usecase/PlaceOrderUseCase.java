@@ -24,19 +24,18 @@ public class PlaceOrderUseCase {
     }
 
     public PlaceOrderOutput execute(PlaceOrderInput input) {
-        // Using Facade Service to get DTO
         return cartService.getCartForOrder(input.userId())
                 .filter(cart -> !cart.isEmpty())
-                .map(this::createOrderFromCart)
+                .map(cart -> createOrderFromCart(cart, input.recipientName(), input.shippingAddress()))
                 .orElseGet(() -> new PlaceOrderOutput(false, "Cart is empty or not found", null, null, null));
     }
 
-    private PlaceOrderOutput createOrderFromCart(CartDto cart) {
+    private PlaceOrderOutput createOrderFromCart(CartDto cart, String recipientName, String shippingAddress) {
         List<OrderItem> orderItems = cart.items().stream()
                 .map(item -> new OrderItem(item.productId(), item.quantity(), item.unitPrice()))
                 .collect(Collectors.toList());
-        
-        Order order = Order.create(cart.userId(), orderItems, cart.discount());
+
+        Order order = Order.create(cart.userId(), recipientName, shippingAddress, orderItems, cart.discount());
         orderRepository.save(order);
         
         // Clearing cart via Facade

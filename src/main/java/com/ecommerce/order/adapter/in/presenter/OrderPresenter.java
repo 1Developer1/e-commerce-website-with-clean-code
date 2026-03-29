@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  */
 public class OrderPresenter {
 
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     /**
      * Transforms PlaceOrderOutput into a View-friendly Map.
@@ -34,7 +34,7 @@ public class OrderPresenter {
 
         if (output.success() && output.orderId() != null) {
             viewModel.put("orderId", output.orderId().toString());
-            viewModel.put("orderStatus", formatStatus(output.status()));
+            viewModel.put("orderStatus", output.status());
             viewModel.put("displayTotal", "USD " + output.totalAmount().toPlainString());
         }
 
@@ -69,14 +69,16 @@ public class OrderPresenter {
     private Map<String, Object> presentSingleOrder(Order order) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("id", order.getId().toString());
-        map.put("status", formatStatus(order.getStatus().name()));
-        map.put("createdAt", order.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME));
-        
+        map.put("status", order.getStatus().name());
+        map.put("recipientName", order.getRecipientName());
+        map.put("shippingAddress", order.getShippingAddress());
+        map.put("createdAt", order.getCreatedAt().format(FORMATTER));
+
         if (order.getTotalAmount() != null) {
             map.put("totalAmount", order.getTotalAmount().getAmount().toPlainString());
             map.put("currency", order.getTotalAmount().getCurrency());
         }
-        
+
         List<Map<String, Object>> items = order.getItems().stream().map(item -> {
             Map<String, Object> itemMap = new LinkedHashMap<>();
             itemMap.put("productId", item.getProductId().toString());
@@ -84,23 +86,8 @@ public class OrderPresenter {
             itemMap.put("price", item.getPrice().getAmount().toPlainString());
             return itemMap;
         }).collect(Collectors.toList());
-        
+
         map.put("items", items);
         return map;
-    }
-
-    /**
-     * User-friendly status label.
-     */
-    private String formatStatus(String rawStatus) {
-        if (rawStatus == null) return "Unknown";
-        return switch (rawStatus) {
-            case "CREATED" -> "Sipariş Oluşturuldu";
-            case "PAID" -> "Ödeme Tamamlandı";
-            case "SHIPPED" -> "Kargoya Verildi";
-            case "DELIVERED" -> "Teslim Edildi";
-            case "CANCELLED" -> "İptal Edildi";
-            default -> rawStatus;
-        };
     }
 }

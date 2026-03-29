@@ -20,6 +20,12 @@ public class DiscountJpaEntity {
     @Column(nullable = false)
     private String currency;
 
+    @Column(nullable = false)
+    private boolean active = true;
+
+    @Column
+    private java.time.LocalDateTime expiryDate;
+
     public DiscountJpaEntity() {
     }
 
@@ -49,5 +55,19 @@ public class DiscountJpaEntity {
     }
     public void setCurrency(String currency) {
         this.currency = currency;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public java.time.LocalDateTime getExpiryDate() {
+        return expiryDate;
+    }
+    public void setExpiryDate(java.time.LocalDateTime expiryDate) {
+        this.expiryDate = expiryDate;
     }
 }

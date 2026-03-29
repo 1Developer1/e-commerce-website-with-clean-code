@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
  */
 public class ProductPresenter {
 
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     /**
      * Transforms CreateProductOutput into a View-friendly Map.
@@ -48,11 +48,15 @@ public class ProductPresenter {
                 })
                 .collect(Collectors.toList());
 
+        int totalPages = output.size() > 0
+                ? (int) Math.ceil((double) output.totalElements() / output.size())
+                : 0;
+
         Map<String, Object> viewModel = new LinkedHashMap<>();
         viewModel.put("page", output.page());
         viewModel.put("size", output.size());
         viewModel.put("totalElements", output.totalElements());
-        viewModel.put("totalCount", formattedProducts.size());
+        viewModel.put("totalPages", totalPages);
         viewModel.put("products", formattedProducts);
         return viewModel;
     }

@@ -14,25 +14,33 @@ public class Order {
 
     private final UUID id;
     private final UUID userId;
+    private final String recipientName;
+    private final String shippingAddress;
     private final List<OrderItem> items;
-    private final Money discount; // New field
+    private final Money discount;
     private Status status;
     private final LocalDateTime createdAt;
     private final Money totalAmount;
 
-    public Order(UUID id, UUID userId, List<OrderItem> items, Money discount) {
+    public Order(UUID id, UUID userId, String recipientName, String shippingAddress, List<OrderItem> items, Money discount) {
+        if (recipientName == null || recipientName.isBlank()) throw new IllegalArgumentException("Recipient name is required");
+        if (shippingAddress == null || shippingAddress.isBlank()) throw new IllegalArgumentException("Shipping address is required");
         this.id = id;
         this.userId = userId;
+        this.recipientName = recipientName;
+        this.shippingAddress = shippingAddress;
         this.items = items;
         this.discount = discount != null ? discount : new Money(BigDecimal.ZERO, "USD");
         this.status = Status.CREATED;
         this.createdAt = LocalDateTime.now();
         this.totalAmount = calculateTotal();
     }
-    
-    private Order(UUID id, UUID userId, List<OrderItem> items, Money discount, Status status, LocalDateTime createdAt, Money totalAmount) {
+
+    private Order(UUID id, UUID userId, String recipientName, String shippingAddress, List<OrderItem> items, Money discount, Status status, LocalDateTime createdAt, Money totalAmount) {
         this.id = id;
         this.userId = userId;
+        this.recipientName = recipientName;
+        this.shippingAddress = shippingAddress;
         this.items = items;
         this.discount = discount != null ? discount : new Money(BigDecimal.ZERO, "USD");
         this.status = status;
@@ -40,12 +48,12 @@ public class Order {
         this.totalAmount = totalAmount;
     }
 
-    public static Order create(UUID userId, List<OrderItem> items, Money discount) {
-        return new Order(UUID.randomUUID(), userId, items, discount);
+    public static Order create(UUID userId, String recipientName, String shippingAddress, List<OrderItem> items, Money discount) {
+        return new Order(UUID.randomUUID(), userId, recipientName, shippingAddress, items, discount);
     }
-    
-    public static Order restore(UUID id, UUID userId, List<OrderItem> items, Money discount, Status status, LocalDateTime createdAt, Money totalAmount) {
-        return new Order(id, userId, items, discount, status, createdAt, totalAmount);
+
+    public static Order restore(UUID id, UUID userId, String recipientName, String shippingAddress, List<OrderItem> items, Money discount, Status status, LocalDateTime createdAt, Money totalAmount) {
+        return new Order(id, userId, recipientName, shippingAddress, items, discount, status, createdAt, totalAmount);
     }
     
     private Money calculateTotal() {
@@ -68,6 +76,14 @@ public class Order {
     
     public UUID getUserId() {
         return userId;
+    }
+
+    public String getRecipientName() {
+        return recipientName;
+    }
+
+    public String getShippingAddress() {
+        return shippingAddress;
     }
 
     public Money getDiscount() {

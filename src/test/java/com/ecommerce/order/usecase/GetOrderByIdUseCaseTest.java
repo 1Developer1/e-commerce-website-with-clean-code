@@ -29,7 +29,7 @@ class GetOrderByIdUseCaseTest {
 
         UUID orderId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
-        Order order = Order.restore(orderId, userId, java.util.Collections.emptyList(), null, Order.Status.CREATED, java.time.LocalDateTime.now(), Money.of(new java.math.BigDecimal("100.00"), "USD"));
+        Order order = Order.restore(orderId, userId, "Test User", "123 Test St", java.util.Collections.emptyList(), null, Order.Status.CREATED, java.time.LocalDateTime.now(), Money.of(new java.math.BigDecimal("100.00"), "USD"));
 
         when(repository.findById(orderId)).thenReturn(Optional.of(order));
 
@@ -78,7 +78,7 @@ class GetOrderByIdUseCaseTest {
         UUID orderId = UUID.randomUUID();
         UUID ownerId = UUID.randomUUID();
         UUID attackerId = UUID.randomUUID();
-        Order order = Order.restore(orderId, ownerId, java.util.Collections.emptyList(), null, Order.Status.CREATED, java.time.LocalDateTime.now(), Money.of(new java.math.BigDecimal("100.00"), "USD"));
+        Order order = Order.restore(orderId, ownerId, "Owner Name", "456 Owner St", java.util.Collections.emptyList(), null, Order.Status.CREATED, java.time.LocalDateTime.now(), Money.of(new java.math.BigDecimal("100.00"), "USD"));
 
         when(repository.findById(orderId)).thenReturn(Optional.of(order));
 

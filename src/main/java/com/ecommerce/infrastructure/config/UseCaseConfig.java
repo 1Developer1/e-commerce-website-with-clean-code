@@ -2,9 +2,7 @@ package com.ecommerce.infrastructure.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 
-import com.ecommerce.cart.adapter.out.persistence.InMemoryCartRepository;
 import com.ecommerce.cart.usecase.AddToCartUseCase;
 import com.ecommerce.cart.usecase.GetCartUseCase;
 import com.ecommerce.cart.usecase.CartRepository;
@@ -13,7 +11,6 @@ import com.ecommerce.cart.usecase.port.DiscountProvider;
 import com.ecommerce.cart.api.CartService;
 import com.ecommerce.cart.internal.CartModule;
 
-import com.ecommerce.order.adapter.out.persistence.InMemoryOrderRepository;
 import com.ecommerce.order.usecase.GetOrderByIdUseCase;
 import com.ecommerce.order.usecase.GetOrdersUseCase;
 import com.ecommerce.order.usecase.OrderRepository;
@@ -22,18 +19,17 @@ import com.ecommerce.order.adapter.in.event.OrderPaymentEventHandler;
 
 import com.ecommerce.shipping.adapter.in.event.OrderPaidEventHandler;
 
-import com.ecommerce.product.adapter.out.persistence.InMemoryProductRepository;
 import com.ecommerce.product.usecase.CreateProductUseCase;
 import com.ecommerce.product.usecase.ListProductsUseCase;
 import com.ecommerce.product.usecase.ProductRepository;
 
 import com.ecommerce.discount.usecase.DiscountRepository;
-import com.ecommerce.discount.adapter.out.persistence.InMemoryDiscountRepository;
 import com.ecommerce.discount.usecase.GetDiscountUseCase;
 import com.ecommerce.discount.usecase.GetDiscountInput;
 import com.ecommerce.discount.usecase.GetDiscountOutput;
 
 import com.ecommerce.payment.usecase.port.PaymentGateway;
+import com.ecommerce.payment.usecase.port.OrderQueryPort;
 import com.ecommerce.payment.adapter.out.strategy.CreditCardAdapter;
 import com.ecommerce.payment.adapter.out.strategy.BankTransferAdapter;
 import com.ecommerce.payment.usecase.PayOrderUseCase;
@@ -48,13 +44,16 @@ import com.ecommerce.shipping.internal.ShippingModule;
 import com.ecommerce.shared.event.EventBus;
 import com.ecommerce.shared.event.SimpleEventBus;
 import com.ecommerce.infrastructure.tracing.TraceContextPropagator;
+import com.ecommerce.infrastructure.security.JwtUtil;
 
-import com.ecommerce.product.adapter.in.controller.ProductController;
-import com.ecommerce.cart.adapter.in.controller.CartController;
-import com.ecommerce.order.adapter.in.controller.OrderController;
-import com.ecommerce.payment.adapter.in.controller.PaymentController;
+import com.ecommerce.user.usecase.UserRepository;
+import com.ecommerce.user.usecase.LoginUseCase;
+import com.ecommerce.user.usecase.RegisterUserUseCase;
+import com.ecommerce.user.usecase.port.TokenGeneratorPort;
 
-import java.math.BigDecimal;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -64,6 +63,27 @@ public class UseCaseConfig {
     @Bean
     public EventBus eventBus() {
         return new SimpleEventBus();
+    }
+
+    // --- AUTH ---
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public TokenGeneratorPort tokenGeneratorPort(JwtUtil jwtUtil) {
+        return jwtUtil::generateToken;
+    }
+
+    @Bean
+    public RegisterUserUseCase registerUserUseCase(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        return new RegisterUserUseCase(userRepository, passwordEncoder);
+    }
+
+    @Bean
+    public LoginUseCase loginUseCase(UserRepository userRepository, PasswordEncoder passwordEncoder, TokenGeneratorPort tokenGeneratorPort) {
+        return new LoginUseCase(userRepository, passwordEncoder, tokenGeneratorPort);
     }
 
     // --- REPOSITORIES (In-Memory for now) ---
@@ -159,8 +179,22 @@ public class UseCaseConfig {
     }
 
     @Bean
-    public PayOrderUseCase payOrderUseCase(Map<String, PaymentGateway> paymentStrategies, EventBus eventBus) {
-        return new PayOrderUseCase(paymentStrategies, eventBus);
+    public OrderQueryPort orderQueryPort(OrderRepository orderRepository) {
+        return new OrderQueryPort() {
+            @Override
+            public java.util.Optional<com.ecommerce.shared.domain.Money> findOrderTotal(java.util.UUID orderId) {
+                return orderRepository.findById(orderId).map(com.ecommerce.order.entity.Order::getTotalAmount);
+            }
+            @Override
+            public java.util.Optional<java.util.UUID> findOrderUserId(java.util.UUID orderId) {
+                return orderRepository.findById(orderId).map(com.ecommerce.order.entity.Order::getUserId);
+            }
+        };
+    }
+
+    @Bean
+    public PayOrderUseCase payOrderUseCase(Map<String, PaymentGateway> paymentStrategies, OrderQueryPort orderQueryPort, EventBus eventBus) {
+        return new PayOrderUseCase(paymentStrategies, orderQueryPort, eventBus);
     }
 
     @Bean

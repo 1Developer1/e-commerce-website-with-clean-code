@@ -3,6 +3,7 @@ package com.ecommerce.infrastructure.config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import com.ecommerce.product.usecase.CreateProductInput;
@@ -13,15 +14,11 @@ import com.ecommerce.product.usecase.ListProductsUseCase;
 import com.ecommerce.cart.adapter.in.controller.CartController;
 import com.ecommerce.cart.adapter.in.controller.AddToCartRequest;
 import com.ecommerce.cart.adapter.in.controller.ApplyDiscountRequest;
-import com.ecommerce.cart.usecase.AddToCartOutput;
-import com.ecommerce.cart.usecase.ApplyDiscountOutput;
 import com.ecommerce.order.usecase.PlaceOrderInput;
 import com.ecommerce.order.usecase.PlaceOrderOutput;
 import com.ecommerce.order.usecase.PlaceOrderUseCase;
 import com.ecommerce.payment.adapter.in.controller.PaymentController;
 import com.ecommerce.payment.adapter.in.controller.PayOrderRequest;
-import com.ecommerce.payment.usecase.PayOrderInput;
-import com.ecommerce.payment.usecase.PayOrderOutput;
 import com.ecommerce.shipping.api.ShippingService;
 import java.util.Map;
 
@@ -29,6 +26,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Component
+@Profile("demo")
 public class ScenarioRunner implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(ScenarioRunner.class);
@@ -85,12 +83,12 @@ public class ScenarioRunner implements CommandLineRunner {
 
         // Step 5: Place Order (Use Case directly to get typed output for payment)
         logger.info("\n[5] Placing Order...");
-        PlaceOrderOutput orderOutput = placeOrderUseCase.execute(new PlaceOrderInput(userId));
+        PlaceOrderOutput orderOutput = placeOrderUseCase.execute(new PlaceOrderInput(userId, "John Doe", "123 Main St, Springfield"));
         logger.info("Order Placed: ID=" + orderOutput.orderId() + ", Status=" + orderOutput.status() + ", Total=" + orderOutput.totalAmount());
         
         // Step 6: Pay Order
         logger.info("\n[6] Paying Order...");
-        PayOrderRequest payRequest = new PayOrderRequest(orderOutput.orderId(), orderOutput.totalAmount(), "USD", "CREDIT_CARD");
+        PayOrderRequest payRequest = new PayOrderRequest(orderOutput.orderId(), "CREDIT_CARD");
         Map<String, Object> payOutput = paymentController.payOrder(userId, payRequest).getBody();
         logger.info("Payment Result: " + payOutput.get("success") + " (" + payOutput.get("message") + ")");
         
