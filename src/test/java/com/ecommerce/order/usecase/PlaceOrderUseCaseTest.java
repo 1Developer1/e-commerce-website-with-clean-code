@@ -39,7 +39,7 @@ class PlaceOrderUseCaseTest {
     void shouldPlaceOrderSuccessfully() {
         UUID userId = UUID.randomUUID();
         
-        CartItemDto itemDto = new CartItemDto(UUID.randomUUID(), 2, Money.of(BigDecimal.TEN, "USD"), Money.of(new BigDecimal("20.00"), "USD"));
+        CartItemDto itemDto = new CartItemDto(UUID.randomUUID(), "Test Product", 2, Money.of(BigDecimal.TEN, "USD"), Money.of(new BigDecimal("20.00"), "USD"));
         CartDto cartDto = new CartDto(userId, List.of(itemDto), Money.of(BigDecimal.ZERO, "USD"), Money.of(new BigDecimal("20.00"), "USD"));
 
         when(cartService.getCartForOrder(userId)).thenReturn(Optional.of(cartDto));

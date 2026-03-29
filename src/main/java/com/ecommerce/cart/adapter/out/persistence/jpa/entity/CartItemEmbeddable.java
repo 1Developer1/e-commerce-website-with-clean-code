@@ -10,6 +10,9 @@ public class CartItemEmbeddable {
     @Column(nullable = false)
     private UUID productId;
 
+    @Column(name = "product_name", nullable = false)
+    private String productName;
+
     @Column(nullable = false)
     private int quantity;
 
@@ -22,8 +25,9 @@ public class CartItemEmbeddable {
     public CartItemEmbeddable() {
     }
 
-    public CartItemEmbeddable(UUID productId, int quantity, BigDecimal priceAmount, String priceCurrency) {
+    public CartItemEmbeddable(UUID productId, String productName, int quantity, BigDecimal priceAmount, String priceCurrency) {
         this.productId = productId;
+        this.productName = productName;
         this.quantity = quantity;
         this.priceAmount = priceAmount;
         this.priceCurrency = priceCurrency;
@@ -34,6 +38,13 @@ public class CartItemEmbeddable {
     }
     public void setProductId(UUID productId) {
         this.productId = productId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+    public void setProductName(String productName) {
+        this.productName = productName;
     }
 
     public int getQuantity() {

@@ -16,11 +16,14 @@ public class CartJpaEntity {
     @Column(nullable = false, unique = true)
     private UUID userId;
 
+    @Column(nullable = false)
+    private String status = "ACTIVE";
+
     private BigDecimal discountAmount;
     private String discountCurrency;
 
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "cart_items", joinColumns = @JoinColumn(name = "cart_id"))
+    @CollectionTable(name = "cart_items", joinColumns = @JoinColumn(name = "cart_jpa_entity_id"))
     private List<CartItemEmbeddable> items = new ArrayList<>();
 
     public CartJpaEntity() {
@@ -38,6 +41,13 @@ public class CartJpaEntity {
     }
     public void setUserId(UUID userId) {
         this.userId = userId;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public BigDecimal getDiscountAmount() {

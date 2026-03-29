@@ -58,6 +58,7 @@ public class CartPersistenceAdapter implements CartRepository {
         List<CartItemEmbeddable> embeddableItems = cart.getItems().stream()
                 .map(item -> new CartItemEmbeddable(
                         item.getProductId(),
+                        item.getProductName(),
                         item.getQuantity(),
                         item.getPrice().getAmount(),
                         item.getPrice().getCurrency()
@@ -72,6 +73,7 @@ public class CartPersistenceAdapter implements CartRepository {
         List<CartItem> items = entity.getItems().stream()
                 .map(embeddable -> new CartItem(
                         embeddable.getProductId(),
+                        embeddable.getProductName(),
                         embeddable.getQuantity(),
                         Money.of(embeddable.getPriceAmount(), embeddable.getPriceCurrency())
                 ))
@@ -89,6 +91,7 @@ public class CartPersistenceAdapter implements CartRepository {
         List<CartItemDto> items = cart.getItems().stream()
                 .map(item -> new CartItemDto(
                         item.getProductId(),
+                        item.getProductName(),
                         item.getQuantity(),
                         item.getUnitPrice(),
                         item.getTotalPrice()

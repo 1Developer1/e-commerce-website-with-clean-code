@@ -25,6 +25,7 @@ public class CartMapper {
     private static CartItemDto toDto(CartItem item) {
         return new CartItemDto(
             item.getProductId(),
+            item.getProductName(),
             item.getQuantity(),
             item.getUnitPrice(),
             item.getTotalPrice()

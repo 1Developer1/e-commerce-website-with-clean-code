@@ -67,6 +67,7 @@ public class OrderPersistenceAdapter implements OrderRepository {
         List<OrderItemJpaEntity> itemEntities = order.getItems().stream().map(item -> {
             OrderItemJpaEntity itemEntity = new OrderItemJpaEntity();
             itemEntity.setProductId(item.getProductId());
+            itemEntity.setProductName(item.getProductName());
             itemEntity.setQuantity(item.getQuantity());
             itemEntity.setPriceAmount(item.getPrice().getAmount());
             itemEntity.setPriceCurrency(item.getPrice().getCurrency());
@@ -82,6 +83,7 @@ public class OrderPersistenceAdapter implements OrderRepository {
         List<OrderItem> items = entity.getItems().stream().map(itemEntity ->
             new OrderItem(
                 itemEntity.getProductId(),
+                itemEntity.getProductName(),
                 itemEntity.getQuantity(),
                 Money.of(itemEntity.getPriceAmount(), itemEntity.getPriceCurrency())
             )

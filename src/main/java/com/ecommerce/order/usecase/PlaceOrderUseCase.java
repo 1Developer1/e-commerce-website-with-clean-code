@@ -32,7 +32,7 @@ public class PlaceOrderUseCase {
 
     private PlaceOrderOutput createOrderFromCart(CartDto cart, String recipientName, String shippingAddress) {
         List<OrderItem> orderItems = cart.items().stream()
-                .map(item -> new OrderItem(item.productId(), item.quantity(), item.unitPrice()))
+                .map(item -> new OrderItem(item.productId(), item.productName(), item.quantity(), item.unitPrice()))
                 .collect(Collectors.toList());
 
         Order order = Order.create(cart.userId(), recipientName, shippingAddress, orderItems, cart.discount());
