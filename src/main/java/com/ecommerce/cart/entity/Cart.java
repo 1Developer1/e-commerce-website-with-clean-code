@@ -48,7 +48,7 @@ public class Cart {
         if (existingItem.isPresent()) {
             existingItem.get().increaseQuantity(quantity);
         } else {
-            items.add(new CartItem(product.getId(), quantity, product.getPrice()));
+            items.add(new CartItem(product.getId(), product.getName(), quantity, product.getPrice()));
         }
     }
 
